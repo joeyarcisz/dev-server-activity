@@ -1,0 +1,39 @@
+name: Feature request
+description: Propose a focused improvement to a real local-development workflow.
+title: "[Feature]: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the development workflow and what happens today.
+    validations:
+      required: true
+  - type: textarea
+    id: current-approach
+    attributes:
+      label: What do you do now?
+      description: Include the command or tool you currently use, if relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the smallest useful change.
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Process-safety considerations
+      description: Could this change select, signal, or display the wrong process?
+    validations:
+      required: true
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This request is about local development-server visibility or control on macOS.
+          required: true

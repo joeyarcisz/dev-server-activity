@@ -1,0 +1,79 @@
+name: Bug report
+description: Report a reproducible problem with Dev Server Activity.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Remove personal paths, client names, credentials, and other private information before submitting. Security vulnerabilities must use the private reporting link in SECURITY.md.
+  - type: input
+    id: app-version
+    attributes:
+      label: App version
+      placeholder: 1.0.0 (1)
+    validations:
+      required: true
+  - type: input
+    id: macos-version
+    attributes:
+      label: macOS version
+      placeholder: 14.7.6
+    validations:
+      required: true
+  - type: dropdown
+    id: architecture
+    attributes:
+      label: Mac architecture
+      options:
+        - Apple silicon
+        - Intel
+        - Unknown
+    validations:
+      required: true
+  - type: dropdown
+    id: installation
+    attributes:
+      label: Installation source
+      options:
+        - Official GitHub Release
+        - Built from source
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Use a disposable local server when possible.
+      placeholder: |
+        1. Start ...
+        2. Open ...
+        3. Select ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add a redacted screenshot or relevant log output if it helps.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Confirmation
+      options:
+        - label: I removed personal paths, client information, credentials, and secrets.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true

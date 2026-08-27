@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!--
+    This app stops dev-server processes the user did not spawn, which the macOS
+    App Sandbox forbids (kill() returns EPERM, and lsof is starved of output).
+    The sandbox is therefore intentionally OFF: distribute via Developer ID +
+    notarization (direct download), NOT the Mac App Store. Do not re-add
+    com.apple.security.app-sandbox without removing the Stop feature.
+  -->
+</dict>
+</plist>
