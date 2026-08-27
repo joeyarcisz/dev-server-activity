@@ -8,6 +8,12 @@ A native Mac app for finding local development servers that are still running an
 
 ![Dev Server Activity showing two local Python servers with project, PID, port, and stop controls](docs/images/dev-server-activity.png)
 
+## Why it exists
+
+I built Dev Server Activity after opening it and discovering at least 12 local development servers I did not know were still running. `lsof` and `ps` had the raw facts, but I wanted the project folder, full command, PID, hosts, and listening ports in one place before stopping anything.
+
+A port number is not an identity. The app keeps the choice with the person at the keyboard and checks the selected process again immediately before sending a signal.
+
 ## Download
 
 Download the current Apple-silicon build from [GitHub Releases](https://github.com/joeyarcisz/dev-server-activity/releases/latest).
