@@ -25,6 +25,12 @@ with zipfile.ZipFile(root / "disguised-metadata.zip", "w", compression=zipfile.Z
 with zipfile.ZipFile(root / "path-traversal.zip", "w", compression=zipfile.ZIP_DEFLATED) as archive:
     archive.writestr("../outside", b"unexpected")
 
+with zipfile.ZipFile(root / "embedded-build-path.zip", "w", compression=zipfile.ZIP_DEFLATED) as archive:
+    archive.writestr(
+        "DevServerActivity.app/Contents/MacOS/DevServerActivity",
+        b"binary prefix /private/tmp/build/source.swift binary suffix",
+    )
+
 (root / "malformed.zip").write_bytes(b"not a ZIP archive")
 PY
 
@@ -35,6 +41,7 @@ for unsafe_archive in \
   "$TMP_DIR/canonical-appledouble.zip" \
   "$TMP_DIR/disguised-metadata.zip" \
   "$TMP_DIR/path-traversal.zip" \
+  "$TMP_DIR/embedded-build-path.zip" \
   "$TMP_DIR/malformed.zip"
 do
   if "$ROOT_DIR/script/audit_public_artifacts.sh" archive "$unsafe_archive" >/dev/null 2>&1; then

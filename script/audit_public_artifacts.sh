@@ -158,12 +158,16 @@ maximum_entries = 10_000
 maximum_entry_bytes = 256 * 1024 * 1024
 maximum_total_bytes = 512 * 1024 * 1024
 appledouble_magic = b"\x00\x05\x16\x07"
-prohibited_metadata = (
-    b"com.apple.quarantine",
-    b"com.apple.provenance",
-    b"com.apple.metadata:kmditemwherefroms",
+prohibited_markers = (
+    (b"com.apple.quarantine", "local xattr metadata"),
+    (b"com.apple.provenance", "local xattr metadata"),
+    (b"com.apple.metadata:kmditemwherefroms", "local xattr metadata"),
+    (b"/users/", "an absolute user path"),
+    (b"/private/tmp/", "a temporary build path"),
+    (b"/var/folders/", "a temporary build path"),
+    (b"/tmp/", "a temporary build path"),
 )
-maximum_marker_length = max(map(len, prohibited_metadata))
+maximum_marker_length = max(len(marker) for marker, _ in prohibited_markers)
 
 
 def reject(message: str) -> None:
@@ -231,8 +235,9 @@ try:
                         symlink_target.extend(chunk)
 
                     searchable = (overlap + chunk).lower()
-                    if any(marker in searchable for marker in prohibited_metadata):
-                        reject(f"archive entry embeds local xattr metadata: {name}")
+                    for marker, description in prohibited_markers:
+                        if marker in searchable:
+                            reject(f"archive entry embeds {description}: {name}")
                     overlap = searchable[-(maximum_marker_length - 1):]
 
             if bytes(first_bytes) == appledouble_magic:

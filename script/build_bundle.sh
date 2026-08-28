@@ -29,6 +29,9 @@ esac
 
 cd "$ROOT_DIR"
 SWIFT_BUILD_ARGS=(-c "$CONFIGURATION")
+if [ "$CONFIGURATION" = "release" ]; then
+  SWIFT_BUILD_ARGS+=(-Xswiftc -gnone)
+fi
 if [ -n "$SWIFT_SCRATCH_PATH" ]; then
   SWIFT_BUILD_ARGS+=(--scratch-path "$SWIFT_SCRATCH_PATH")
 fi
