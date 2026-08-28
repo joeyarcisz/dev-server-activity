@@ -5,7 +5,7 @@ Dev Server Activity ships through GitHub Releases as a Developer ID-signed and A
 ## Supported release
 
 - Bundle ID: `com.joeyarcisz.DevServerActivity`
-- Version: `1.0.0` (`1`)
+- Version: `1.0.1` (`2`)
 - Minimum macOS: 14.0
 - Current binary architecture: Apple silicon (`arm64`)
 - Distribution: [GitHub Releases](https://github.com/joeyarcisz/dev-server-activity/releases)
@@ -51,7 +51,8 @@ The script has no unsigned or skip-notarization release mode. It must pass:
 6. Stapling and stapler validation.
 7. Gatekeeper acceptance.
 8. ZIP expansion followed by repeated signature, staple, and Gatekeeper checks.
-9. SHA-256 generation and a verification receipt.
+9. Rejection of embedded AppleDouble, quarantine, provenance, and download-origin metadata in the public ZIP.
+10. SHA-256 generation and a verification receipt.
 
 Packaging does not prove behavior. Before publication, launch the expanded notarized app against disposable recognized servers and verify scan, Open, Stop, and Force Stop.
 
@@ -63,5 +64,12 @@ Packaging does not prove behavior. Before publication, launch the expanded notar
 4. Compare the downloaded ZIP against the local canonical SHA-256.
 5. Expand the downloaded ZIP and rerun `codesign`, `stapler`, and `spctl` checks.
 6. Confirm that the release page, source tag, architecture, macOS requirement, and safety notes are accurate.
+7. Confirm that the release-verification workflow attests the downloaded ZIP after checksum, archive, signature, staple, and Gatekeeper checks pass.
+
+```bash
+gh attestation verify DevServerActivity-1.0.1-2-macos-arm64.zip \
+  --repo joeyarcisz/dev-server-activity \
+  --predicate-type https://in-toto.io/attestation/release/v0.1
+```
 
 Do not call a local artifact, draft release, successful upload, or authenticated download a public release. The signed-out download and expanded artifact must pass the final checks.

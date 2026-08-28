@@ -10,6 +10,7 @@ lsof: current-user TCP listeners
             v
      unique process IDs
             |
+            +--> proc_pidinfo: launch identity
             +--> ps: command and arguments
             +--> lsof: working directory
             |
@@ -27,7 +28,10 @@ If `lsof` cannot provide process information, `LocalPortProbeScanner` tests a fi
 ## Stop flow
 
 ```text
-user confirms selected server
+user confirms frozen server target
+            |
+            v
+same PID launch identity?
             |
             v
 re-read exact PID command line
@@ -36,14 +40,16 @@ re-read exact PID command line
 re-read listening ports for PID
             |
             v
-same command and expected port?
+same launch identity, command, and expected port?
        |                 |
       no                yes
        |                 |
 refresh; no signal    SIGTERM or SIGKILL
 ```
 
-`DevServerTerminator` does not trust a stale scan. It requires a positive PID, a recorded command line, and at least one expected port. Immediately before signaling, it requires the same command line and confirms that the PID still owns an expected listening port. A failed command, a missing process, or any identity mismatch stops the operation.
+`DevServerTerminator` does not trust a stale scan. It requires a positive PID, a recorded launch identity, a recorded command line, and at least one expected port. It checks launch identity before validation, requires the same command line and an expected listening port, then checks launch identity again immediately before signaling. A failed command, a missing process, or any identity mismatch stops the operation.
+
+System-command output is drained while each command runs. Every command has a time limit and output-size limit, and scanning and termination run outside the main actor so a stalled system tool cannot freeze the interface.
 
 Normal Stop sends `SIGTERM`. Force Stop sends `SIGKILL`.
 

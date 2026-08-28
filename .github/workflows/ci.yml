@@ -20,13 +20,22 @@ jobs:
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Audit public source artifacts
+        run: ./script/audit_public_artifacts.sh source
+
+      - name: Test release artifact audit
+        run: ./script/test_artifact_audit.sh
 
       - name: Show Swift version
         run: swift --version
 
       - name: Run tests
         run: swift test
+
+      - name: Check public protocol compatibility
+        run: ./script/check_api_compatibility.sh
 
       - name: Build release configuration
         run: swift build -c release

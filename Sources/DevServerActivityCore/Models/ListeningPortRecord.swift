@@ -1,6 +1,6 @@
 import Foundation
 
-public struct ListeningPortRecord: Equatable, Hashable {
+public struct ListeningPortRecord: Equatable, Hashable, Sendable {
     public let pid: Int
     public let command: String
     public let host: String

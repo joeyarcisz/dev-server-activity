@@ -7,7 +7,7 @@ Dev Server Activity is a local macOS utility. It does not collect or transmit pe
 To identify local development servers owned by the current user, the app invokes the macOS `lsof` and `ps` tools and reads:
 
 - Process IDs.
-- Process names and command lines.
+- Process names, launch times, and command lines.
 - Current working directories.
 - TCP listening hosts and ports.
 
@@ -21,7 +21,7 @@ The app contains no accounts, analytics, advertising, crash-reporting service, t
 
 ## Process control
 
-After user confirmation, Stop and Force Stop can send a local signal to the selected process. The app revalidates the command line and an expected listening port immediately before signaling.
+After user confirmation, Stop and Force Stop can send a local signal to the exact process shown in the confirmation. The app revalidates its launch identity, command line, and an expected listening port immediately before signaling.
 
 ## Contact
 

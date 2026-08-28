@@ -1,6 +1,6 @@
 import Foundation
 
-public struct LsofParser {
+public struct LsofParser: Sendable {
     public init() {}
 
     public func parseListeningRecords(_ output: String) -> [ListeningPortRecord] {
@@ -11,7 +11,12 @@ public struct LsofParser {
 
     private func parseLine(_ line: String) -> ListeningPortRecord? {
         let columns = line.split(whereSeparator: \.isWhitespace).map(String.init)
-        guard columns.count >= 10, columns[0] != "COMMAND", let pid = Int(columns[1]) else {
+        guard
+            columns.count >= 10,
+            columns[0] != "COMMAND",
+            let pid = Int(columns[1]),
+            pid > 0
+        else {
             return nil
         }
 
@@ -30,7 +35,7 @@ public struct LsofParser {
 
         let host = String(addressToken[..<separator])
         let portText = String(addressToken[addressToken.index(after: separator)...])
-        guard let port = Int(portText) else {
+        guard let port = Int(portText), (1...65_535).contains(port) else {
             return nil
         }
 

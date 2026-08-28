@@ -36,6 +36,7 @@ if [ "$#" -ne 0 ]; then
 fi
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=Config/app.env
 source "$ROOT_DIR/Config/app.env"
 
 SIGN_IDENTITY="${DEVELOPER_ID_APPLICATION:-}"
@@ -59,6 +60,7 @@ fi
 cd "$ROOT_DIR"
 [ -z "$(git status --porcelain --untracked-files=normal)" ] || fail "source tree must be clean before a public release"
 SOURCE_COMMIT="$(git rev-parse HEAD)"
+"$ROOT_DIR/script/audit_public_artifacts.sh" source
 
 if ! /usr/bin/xcrun notarytool history \
   --keychain-profile "$NOTARY_PROFILE_NAME" \
@@ -191,7 +193,10 @@ fi
 /usr/sbin/spctl --assess --type execute --verbose=4 "$APP_BUNDLE"
 
 /usr/bin/ditto "$APP_BUNDLE" "$FINAL_APP"
-/usr/bin/ditto -c -k --sequesterRsrc --keepParent "$FINAL_APP" "$FINAL_ZIP"
+DITTONORSRC=1 /usr/bin/ditto \
+  -c -k --norsrc --noextattr --noacl --noqtn --keepParent \
+  "$FINAL_APP" "$FINAL_ZIP"
+"$ROOT_DIR/script/audit_public_artifacts.sh" archive "$FINAL_ZIP"
 
 VERIFY_DIR="$(mktemp -d "$RELEASE_TMP_BASE/DevServerActivityVerify.XXXXXX")"
 /usr/bin/ditto -x -k "$FINAL_ZIP" "$VERIFY_DIR"

@@ -18,7 +18,10 @@ final class DevServerTerminatorTests: XCTestCase {
             lsofOutput: lsofLine(pid: pid, port: 5173)
         )
 
-        try DevServerTerminator(runner: runner).stop(server: server, mode: .normal)
+        try DevServerTerminator(
+            runner: runner,
+            identityProvider: matchingIdentityProvider(pid: pid)
+        ).stop(server: server, mode: .normal)
 
         var stopped = false
         for _ in 0..<20 {
@@ -38,6 +41,22 @@ final class DevServerTerminatorTests: XCTestCase {
             }
         }
         XCTAssertTrue(recorder.calls.isEmpty)
+    }
+
+    func testRejectsMalformedExpectedPortsWithoutSignaling() {
+        for malformedPort in [-1, 0, 65_536] {
+            let recorder = SignalRecorder()
+            let terminator = makeTerminator(
+                runner: matchingRunner(port: malformedPort),
+                recorder: recorder
+            )
+
+            assertTargetChanged(
+                terminator,
+                server: makeServer(ports: [malformedPort]),
+                recorder: recorder
+            )
+        }
     }
 
     func testMatchingTargetUsesSIGTERM() throws {
@@ -80,6 +99,49 @@ final class DevServerTerminatorTests: XCTestCase {
         assertTargetChanged(terminator, recorder: recorder)
     }
 
+    func testRefusesMissingExpectedProcessIdentityWithoutSignaling() {
+        let recorder = SignalRecorder()
+        let terminator = makeTerminator(runner: matchingRunner(), recorder: recorder)
+
+        assertTargetChanged(
+            terminator,
+            server: makeServer(processIdentity: nil),
+            recorder: recorder
+        )
+    }
+
+    func testRefusesChangedProcessIdentityWithoutSignaling() {
+        let recorder = SignalRecorder()
+        let replacementIdentity = ProcessIdentity(
+            startTimeSeconds: expectedIdentity.startTimeSeconds + 1,
+            startTimeMicroseconds: expectedIdentity.startTimeMicroseconds
+        )
+        let terminator = makeTerminator(
+            runner: matchingRunner(),
+            recorder: recorder,
+            identityProvider: StubProcessIdentityProvider(identities: [4242: replacementIdentity])
+        )
+
+        assertTargetChanged(terminator, recorder: recorder)
+    }
+
+    func testRefusesIdentityChangeBetweenValidationAndSignal() {
+        let recorder = SignalRecorder()
+        let replacementIdentity = ProcessIdentity(
+            startTimeSeconds: expectedIdentity.startTimeSeconds + 1,
+            startTimeMicroseconds: expectedIdentity.startTimeMicroseconds
+        )
+        let terminator = makeTerminator(
+            runner: matchingRunner(),
+            recorder: recorder,
+            identityProvider: SequencedProcessIdentityProvider(
+                identities: [expectedIdentity, replacementIdentity]
+            )
+        )
+
+        assertTargetChanged(terminator, recorder: recorder)
+    }
+
     func testRefusesMissingProcessWithoutSignaling() {
         let recorder = SignalRecorder()
         let runner = StubCommandRunner(
@@ -118,12 +180,13 @@ final class DevServerTerminatorTests: XCTestCase {
 
     private func assertTargetChanged(
         _ terminator: DevServerTerminator,
+        server: DevServer = makeServer(),
         recorder: SignalRecorder,
         file: StaticString = #filePath,
         line: UInt = #line
     ) {
         XCTAssertThrowsError(
-            try terminator.stop(server: makeServer(), mode: .normal),
+            try terminator.stop(server: server, mode: .normal),
             file: file,
             line: line
         ) { error in
@@ -154,14 +217,17 @@ final class DevServerTerminatorTests: XCTestCase {
 }
 
 private let expectedCommandLine = "node /tmp/example/node_modules/.bin/vite --port 5173"
+private let expectedIdentity = ProcessIdentity(startTimeSeconds: 1_700_000_000, startTimeMicroseconds: 123_456)
 
 private func makeServer(
     pid: Int = 4242,
     commandLine: String = expectedCommandLine,
-    ports: [Int] = [5173]
+    ports: [Int] = [5173],
+    processIdentity: ProcessIdentity? = expectedIdentity
 ) -> DevServer {
     DevServer(
         pid: pid,
+        processIdentity: processIdentity,
         displayName: "example",
         kind: .vite,
         ports: ports,
@@ -181,6 +247,34 @@ private func matchingRunner(pid: Int = 4242, port: Int = 5173) -> StubCommandRun
 
 private func lsofLine(pid: Int, port: Int) -> String {
     "node \(pid) tester 13u IPv4 0x123 0t0 TCP *:\(port) (LISTEN)"
+}
+
+private struct StubProcessIdentityProvider: ProcessIdentityProviding {
+    let identities: [Int: ProcessIdentity]
+
+    func identity(for pid: Int) -> ProcessIdentity? {
+        identities[pid]
+    }
+}
+
+private final class SequencedProcessIdentityProvider: ProcessIdentityProviding, @unchecked Sendable {
+    private let lock = NSLock()
+    private var identities: [ProcessIdentity]
+
+    init(identities: [ProcessIdentity]) {
+        self.identities = identities
+    }
+
+    func identity(for pid: Int) -> ProcessIdentity? {
+        lock.withLock {
+            guard identities.isEmpty == false else { return nil }
+            return identities.removeFirst()
+        }
+    }
+}
+
+private func matchingIdentityProvider(pid: Int = 4242) -> StubProcessIdentityProvider {
+    StubProcessIdentityProvider(identities: [pid: expectedIdentity])
 }
 
 private struct StubCommandRunner: CommandRunning {
@@ -230,10 +324,12 @@ private final class SignalRecorder {
 
 private func makeTerminator(
     runner: CommandRunning,
-    recorder: SignalRecorder
+    recorder: SignalRecorder,
+    identityProvider: any ProcessIdentityProviding = matchingIdentityProvider()
 ) -> DevServerTerminator {
     DevServerTerminator(
         runner: runner,
+        identityProvider: identityProvider,
         signalProcess: recorder.send,
         errnoProvider: { recorder.errnoCode }
     )

@@ -6,7 +6,7 @@ struct ServerDetailView: View {
     let server: DevServer
     @ObservedObject var store: ServerActivityStore
 
-    @State private var confirmStopMode: StopMode?
+    @State private var pendingStop: StopRequest?
 
     var body: some View {
         ScrollView {
@@ -57,22 +57,25 @@ struct ServerDetailView: View {
         .confirmationDialog(
             confirmationTitle,
             isPresented: Binding(
-                get: { confirmStopMode != nil },
-                set: { if $0 == false { confirmStopMode = nil } }
+                get: { pendingStop != nil },
+                set: { if $0 == false { pendingStop = nil } }
             ),
             titleVisibility: .visible
         ) {
-            if let confirmStopMode {
-                Button(confirmStopMode == .force ? "Force Stop Server" : "Stop Server", role: .destructive) {
-                    store.stopSelected(mode: confirmStopMode)
-                    self.confirmStopMode = nil
+            if let pendingStop {
+                Button(pendingStop.mode == .force ? "Force Stop Server" : "Stop Server", role: .destructive) {
+                    let request = pendingStop
+                    self.pendingStop = nil
+                    store.stop(server: request.server, mode: request.mode)
                 }
             }
             Button("Cancel", role: .cancel) {
-                confirmStopMode = nil
+                pendingStop = nil
             }
         } message: {
-            Text("This will stop \(server.displayName) on port \(server.portSummary).")
+            if let pendingStop {
+                Text("This will stop \(pendingStop.server.displayName) on port \(pendingStop.server.portSummary).")
+            }
         }
     }
 
@@ -92,7 +95,11 @@ struct ServerDetailView: View {
                     Label(server.kind.label, systemImage: "tag")
                     Label(":\(server.portSummary)", systemImage: "number")
                     if let pid = server.pid {
-                        Label("PID \(pid)", systemImage: "cpu")
+                        if server.processIdentity == nil {
+                            Label("PID \(pid) unverified", systemImage: "lock.shield")
+                        } else {
+                            Label("PID \(pid)", systemImage: "cpu")
+                        }
                     } else {
                         Label("Port only", systemImage: "lock.shield")
                     }
@@ -119,21 +126,22 @@ struct ServerDetailView: View {
             } label: {
                 Label("Refresh", systemImage: "arrow.clockwise")
             }
+            .disabled(store.isRefreshing)
 
             Button {
-                confirmStopMode = .normal
+                pendingStop = StopRequest(server: server, mode: .normal)
             } label: {
                 Label("Stop", systemImage: "stop.circle")
             }
-            .disabled(server.canStop == false)
+            .disabled(server.canStop == false || store.isStopping)
             .keyboardShortcut(.delete, modifiers: [.command])
 
             Button(role: .destructive) {
-                confirmStopMode = .force
+                pendingStop = StopRequest(server: server, mode: .force)
             } label: {
                 Label("Force Stop", systemImage: "xmark.octagon")
             }
-            .disabled(server.canStop == false)
+            .disabled(server.canStop == false || store.isStopping)
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 12)
@@ -141,14 +149,19 @@ struct ServerDetailView: View {
     }
 
     private var confirmationTitle: String {
-        guard let confirmStopMode else { return "Stop Server?" }
-        return confirmStopMode == .force ? "Force Stop Server?" : "Stop Server?"
+        guard let pendingStop else { return "Stop Server?" }
+        return pendingStop.mode == .force ? "Force Stop Server?" : "Stop Server?"
     }
 
     private func open(port: Int) {
         guard let url = URL(string: "http://localhost:\(port)") else { return }
         NSWorkspace.shared.open(url)
     }
+}
+
+private struct StopRequest {
+    let server: DevServer
+    let mode: StopMode
 }
 
 private struct DetailRow: View {

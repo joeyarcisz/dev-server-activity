@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=Config/app.env
 source "$ROOT_DIR/Config/app.env"
 
 CONFIGURATION="${CONFIGURATION:-debug}"

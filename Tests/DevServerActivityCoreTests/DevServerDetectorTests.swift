@@ -1,3 +1,4 @@
+import Foundation
 import XCTest
 @testable import DevServerActivityCore
 
@@ -14,30 +15,35 @@ final class DevServerDetectorTests: XCTestCase {
         let processes = [
             1905: ProcessSnapshot(
                 pid: 1905,
+                processIdentity: identity(for: 1905),
                 commandName: "ControlCenter",
                 commandLine: "/System/Library/CoreServices/ControlCenter.app/Contents/MacOS/ControlCenter",
                 workingDirectory: "/"
             ),
             47874: ProcessSnapshot(
                 pid: 47874,
+                processIdentity: identity(for: 47874),
                 commandName: "node",
                 commandLine: "node /Users/tester/Projects/production-hq/node_modules/.bin/vite --host 0.0.0.0 --port 5177",
                 workingDirectory: "/Users/tester/Projects/production-hq"
             ),
             76870: ProcessSnapshot(
                 pid: 76870,
+                processIdentity: identity(for: 76870),
                 commandName: "next-server (v16.1.6)",
                 commandLine: "next-server (v16.1.6)",
                 workingDirectory: "/Users/tester/.Trash/GitHub/example-app"
             ),
             94899: ProcessSnapshot(
                 pid: 94899,
+                processIdentity: identity(for: 94899),
                 commandName: "next-server (v16.2.6)",
                 commandLine: "next-server (v16.2.6)",
                 workingDirectory: "/Users/tester/Projects/example-site/.worktrees/feature-branch"
             ),
             62357: ProcessSnapshot(
                 pid: 62357,
+                processIdentity: identity(for: 62357),
                 commandName: "IPNExtension",
                 commandLine: "/Applications/Tailscale.app/Contents/PlugIns/IPNExtension.appex/Contents/MacOS/IPNExtension",
                 workingDirectory: "/"
@@ -50,6 +56,8 @@ final class DevServerDetectorTests: XCTestCase {
         XCTAssertEqual(servers.first?.displayName, "example-app")
         XCTAssertEqual(servers.first?.kind, .next)
         XCTAssertEqual(servers.first?.ports, [3000])
+        XCTAssertEqual(servers.first?.processIdentity, identity(for: 76870))
+        XCTAssertTrue(servers.first?.canStop == true)
         XCTAssertEqual(servers.last?.displayName, "production-hq")
         XCTAssertEqual(servers.last?.kind, .vite)
     }
@@ -69,6 +77,22 @@ final class DevServerDetectorTests: XCTestCase {
             ListeningPortRecord(pid: 76870, command: "node", host: "*", port: 3000),
             ListeningPortRecord(pid: 4565, command: "python3.1", host: "127.0.0.1", port: 9119)
         ])
+    }
+
+    func testRejectsInvalidPIDsAndPortsInLsofOutput() {
+        let output = """
+        node -1 tester 13u IPv4 0x1 0t0 TCP *:5173 (LISTEN)
+        node 0 tester 13u IPv4 0x2 0t0 TCP *:5173 (LISTEN)
+        node 42 tester 13u IPv4 0x3 0t0 TCP *:-1 (LISTEN)
+        node 42 tester 13u IPv4 0x4 0t0 TCP *:0 (LISTEN)
+        node 42 tester 13u IPv4 0x5 0t0 TCP *:65536 (LISTEN)
+        node 42 tester 13u IPv4 0x6 0t0 TCP *:65535 (LISTEN)
+        """
+
+        XCTAssertEqual(
+            LsofParser().parseListeningRecords(output),
+            [ListeningPortRecord(pid: 42, command: "node", host: "*", port: 65535)]
+        )
     }
 
     func testBuildsPortOnlyServersFromLocalPortProbeFallback() {
@@ -100,6 +124,54 @@ final class DevServerDetectorTests: XCTestCase {
 
         XCTAssertEqual(servers, [.probedLocalhost(port: 3000)])
     }
+
+    func testLocalPortProbeRejectsOutOfRangePortsWithoutCrashing() {
+        let probe = LocalPortProbe()
+
+        XCTAssertFalse(probe.isListening(host: "127.0.0.1", port: -1, timeout: 0.01))
+        XCTAssertFalse(probe.isListening(host: "127.0.0.1", port: 0, timeout: 0.01))
+        XCTAssertFalse(probe.isListening(host: "127.0.0.1", port: 65_536, timeout: 0.01))
+    }
+
+    func testScannerDoesNotAttachIdentityWhenProcessChangesDuringSnapshot() throws {
+        let originalIdentity = identity(for: 4242)
+        let replacementIdentity = ProcessIdentity(
+            startTimeSeconds: originalIdentity.startTimeSeconds + 1,
+            startTimeMicroseconds: 0
+        )
+        let scanner = DevServerScanner(
+            runner: ScannerCommandRunner(),
+            identityProvider: SequencedScannerIdentityProvider(
+                identities: [originalIdentity, replacementIdentity]
+            ),
+            username: "tester"
+        )
+
+        let server = try XCTUnwrap(scanner.scan().first)
+
+        XCTAssertNil(server.processIdentity)
+        XCTAssertFalse(server.canStop)
+    }
+
+    func testScannerAttachesIdentityOnlyWhenStableAcrossSnapshot() throws {
+        let stableIdentity = identity(for: 4242)
+        let scanner = DevServerScanner(
+            runner: ScannerCommandRunner(),
+            identityProvider: SequencedScannerIdentityProvider(
+                identities: [stableIdentity, stableIdentity]
+            ),
+            username: "tester"
+        )
+
+        let server = try XCTUnwrap(scanner.scan().first)
+
+        XCTAssertEqual(server.processIdentity, stableIdentity)
+        XCTAssertTrue(server.canStop)
+    }
+}
+
+private func identity(for pid: Int) -> ProcessIdentity {
+    ProcessIdentity(startTimeSeconds: UInt64(pid), startTimeMicroseconds: 0)
 }
 
 private struct FixedPortProbe: PortProbing {
@@ -121,5 +193,38 @@ private struct FixedPortProbeScanner: PortProbeScanning {
 private struct FailingCommandRunner: CommandRunning {
     func run(_ executable: String, arguments: [String]) throws -> String {
         throw CommandRunnerError.failed(executable: executable, status: 1, output: "operation not permitted")
+    }
+}
+
+private struct ScannerCommandRunner: CommandRunning {
+    func run(_ executable: String, arguments: [String]) throws -> String {
+        switch (executable, arguments) {
+        case ("/usr/sbin/lsof", let values) where values.contains("-u"):
+            return "node 4242 tester 13u IPv4 0x1 0t0 TCP *:5173 (LISTEN)"
+        case ("/bin/ps", let values) where values.contains("comm="):
+            return "node\n"
+        case ("/bin/ps", let values) where values.contains("args="):
+            return "node /tmp/example/node_modules/.bin/vite --port 5173\n"
+        case ("/usr/sbin/lsof", let values) where values.contains("cwd"):
+            return "p4242\nn/tmp/example\n"
+        default:
+            throw CommandRunnerError.failed(executable: executable, status: 2, output: "unexpected command")
+        }
+    }
+}
+
+private final class SequencedScannerIdentityProvider: ProcessIdentityProviding, @unchecked Sendable {
+    private let lock = NSLock()
+    private var identities: [ProcessIdentity]
+
+    init(identities: [ProcessIdentity]) {
+        self.identities = identities
+    }
+
+    func identity(for pid: Int) -> ProcessIdentity? {
+        lock.withLock {
+            guard identities.isEmpty == false else { return nil }
+            return identities.removeFirst()
+        }
     }
 }

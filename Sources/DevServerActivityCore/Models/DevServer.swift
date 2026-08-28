@@ -1,6 +1,6 @@
 import Foundation
 
-public enum DevServerKind: String, CaseIterable, Equatable, Hashable {
+public enum DevServerKind: String, CaseIterable, Equatable, Hashable, Sendable {
     case vite
     case next
     case node
@@ -26,16 +26,20 @@ public enum DevServerKind: String, CaseIterable, Equatable, Hashable {
     }
 }
 
-public struct DevServer: Identifiable, Equatable, Hashable {
+public struct DevServer: Identifiable, Equatable, Hashable, Sendable {
     public var id: String {
         if let pid {
-            return "pid-\(pid)"
+            if let processIdentity {
+                return "pid-\(pid)-\(processIdentity.startTimeSeconds)-\(processIdentity.startTimeMicroseconds)"
+            }
+            return "pid-\(pid)-unverified"
         }
 
         return "port-\(primaryPort ?? 0)"
     }
 
     public let pid: Int?
+    public let processIdentity: ProcessIdentity?
     public let displayName: String
     public let kind: DevServerKind
     public let ports: [Int]
@@ -54,7 +58,32 @@ public struct DevServer: Identifiable, Equatable, Hashable {
         commandLine: String,
         workingDirectory: String
     ) {
+        self.init(
+            pid: pid,
+            processIdentity: nil,
+            displayName: displayName,
+            kind: kind,
+            ports: ports,
+            hosts: hosts,
+            commandName: commandName,
+            commandLine: commandLine,
+            workingDirectory: workingDirectory
+        )
+    }
+
+    public init(
+        pid: Int?,
+        processIdentity: ProcessIdentity?,
+        displayName: String,
+        kind: DevServerKind,
+        ports: [Int],
+        hosts: [String],
+        commandName: String,
+        commandLine: String,
+        workingDirectory: String
+    ) {
         self.pid = pid
+        self.processIdentity = processIdentity
         self.displayName = displayName
         self.kind = kind
         self.ports = ports
@@ -65,7 +94,7 @@ public struct DevServer: Identifiable, Equatable, Hashable {
     }
 
     public var canStop: Bool {
-        pid != nil
+        pid != nil && processIdentity != nil
     }
 
     public var primaryPort: Int? {
@@ -84,6 +113,7 @@ public struct DevServer: Identifiable, Equatable, Hashable {
     public static func probedLocalhost(port: Int) -> DevServer {
         DevServer(
             pid: nil,
+            processIdentity: nil,
             displayName: "localhost:\(port)",
             kind: .other,
             ports: [port],

@@ -1,6 +1,6 @@
 # Security policy
 
-Dev Server Activity inspects and can terminate local processes. Reports involving target selection, PID reuse, command validation, listening-port validation, signing, release integrity, or unexpected data transfer are treated as security-sensitive.
+Dev Server Activity inspects and can terminate local processes. Reports involving confirmation binding, PID reuse, process launch identity, command validation, listening-port validation, signing, release integrity, or unexpected data transfer are treated as security-sensitive.
 
 ## Supported versions
 

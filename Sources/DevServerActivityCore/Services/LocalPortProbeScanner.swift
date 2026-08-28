@@ -43,38 +43,34 @@ public enum CommonDevPorts {
     ])).sorted()
 }
 
-public struct LocalPortProbe: PortProbing {
+public struct LocalPortProbe: PortProbing, Sendable {
     public init() {}
 
     public func isListening(host: String, port: Int, timeout: TimeInterval) -> Bool {
-        guard let nwPort = NWEndpoint.Port(rawValue: UInt16(port)) else {
+        guard
+            (1...65_535).contains(port),
+            let nwPort = NWEndpoint.Port(rawValue: UInt16(port))
+        else {
             return false
         }
 
         let queue = DispatchQueue(label: "DevServerActivity.LocalPortProbe.\(port)")
         let connection = NWConnection(host: NWEndpoint.Host(host), port: nwPort, using: .tcp)
         let group = DispatchGroup()
-        let lock = NSLock()
-        var completed = false
-        var isListening = false
-
-        func finish(_ value: Bool) {
-            lock.lock()
-            defer { lock.unlock() }
-            guard completed == false else { return }
-            completed = true
-            isListening = value
-            group.leave()
-        }
+        let state = PortProbeState()
 
         group.enter()
-        connection.stateUpdateHandler = { state in
-            switch state {
+        connection.stateUpdateHandler = { connectionState in
+            switch connectionState {
             case .ready:
                 connection.cancel()
-                finish(true)
+                if state.finish(true) {
+                    group.leave()
+                }
             case .failed, .cancelled:
-                finish(false)
+                if state.finish(false) {
+                    group.leave()
+                }
             default:
                 break
             }
@@ -84,9 +80,30 @@ public struct LocalPortProbe: PortProbing {
 
         if group.wait(timeout: .now() + timeout) == .timedOut {
             connection.cancel()
-            finish(false)
+            if state.finish(false) {
+                group.leave()
+            }
         }
 
-        return isListening
+        return state.isListening
+    }
+}
+
+private final class PortProbeState: @unchecked Sendable {
+    private let lock = NSLock()
+    private var completed = false
+    private var listening = false
+
+    var isListening: Bool {
+        lock.withLock { listening }
+    }
+
+    func finish(_ value: Bool) -> Bool {
+        lock.withLock {
+            guard completed == false else { return false }
+            completed = true
+            listening = value
+            return true
+        }
     }
 }

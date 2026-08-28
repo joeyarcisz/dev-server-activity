@@ -1,7 +1,7 @@
 import Darwin
 import Foundation
 
-public enum StopMode: Equatable {
+public enum StopMode: Equatable, Sendable {
     case normal
     case force
 
@@ -13,7 +13,7 @@ public enum StopMode: Equatable {
     }
 }
 
-public enum DevServerTerminatorError: Error, LocalizedError {
+public enum DevServerTerminatorError: Error, LocalizedError, Sendable {
     case invalidPID(Int)
     case validationFailed(Int)
     case targetChanged(Int)
@@ -36,6 +36,7 @@ public enum DevServerTerminatorError: Error, LocalizedError {
 public struct DevServerTerminator {
     private let runner: CommandRunning
     private let parser: LsofParser
+    private let identityProvider: ProcessIdentityProviding
     private let signalProcess: (Int, Int32) -> Int32
     private let errnoProvider: () -> Int32
 
@@ -46,6 +47,7 @@ public struct DevServerTerminator {
     init(
         runner: CommandRunning,
         parser: LsofParser = LsofParser(),
+        identityProvider: ProcessIdentityProviding = DarwinProcessIdentityProvider(),
         signalProcess: @escaping (Int, Int32) -> Int32 = { pid, signal in
             Darwin.kill(pid_t(pid), signal)
         },
@@ -53,6 +55,7 @@ public struct DevServerTerminator {
     ) {
         self.runner = runner
         self.parser = parser
+        self.identityProvider = identityProvider
         self.signalProcess = signalProcess
         self.errnoProvider = errnoProvider
     }
@@ -64,9 +67,15 @@ public struct DevServerTerminator {
         }
 
         guard
+            let expectedIdentity = server.processIdentity,
             let expectedCommandLine = server.commandLine.trimmedNonEmpty,
-            server.ports.isEmpty == false
+            server.ports.isEmpty == false,
+            server.ports.allSatisfy({ (1...65_535).contains($0) })
         else {
+            throw DevServerTerminatorError.targetChanged(pid)
+        }
+
+        guard identityProvider.identity(for: pid) == expectedIdentity else {
             throw DevServerTerminatorError.targetChanged(pid)
         }
 
@@ -106,6 +115,10 @@ public struct DevServerTerminator {
                 .map(\.port)
         )
         guard expectedPorts.isDisjoint(with: currentPorts) == false else {
+            throw DevServerTerminatorError.targetChanged(pid)
+        }
+
+        guard identityProvider.identity(for: pid) == expectedIdentity else {
             throw DevServerTerminatorError.targetChanged(pid)
         }
 

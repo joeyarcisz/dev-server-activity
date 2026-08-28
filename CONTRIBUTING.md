@@ -13,6 +13,7 @@ Thanks for helping improve Dev Server Activity. Small, focused changes with clea
 ```bash
 swift test
 swift build -c release
+./script/audit_public_artifacts.sh source
 ```
 
 ## Safety-critical changes
@@ -20,9 +21,11 @@ swift build -c release
 Code that selects or signals a process must fail closed. A pull request that changes termination behavior must prove that:
 
 - An invalid or missing PID is never signaled.
+- A missing or changed process launch identity is never signaled.
 - A changed command line is never signaled.
 - A process that no longer owns an expected listening port is never signaled.
 - A failed validation command is never treated as permission to continue.
+- The launch identity is checked again after command and port validation.
 - Normal Stop uses `SIGTERM` and Force Stop uses `SIGKILL`.
 
 Use disposable processes in tests. Never use a contributor's real development server as an automated fixture.

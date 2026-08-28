@@ -1,0 +1,101 @@
+name: Verify and attest release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing release tag to verify and attest
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+jobs:
+  verify:
+    name: Verify published macOS artifact
+    runs-on: macos-14
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
+
+    steps:
+      - name: Check out the release tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.release_tag }}
+
+      - name: Verify release identity and assets
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_commit="$(git rev-parse HEAD)"
+          tag_commit="$(git rev-list -n 1 "$RELEASE_TAG")"
+          test "$source_commit" = "$tag_commit"
+
+          mkdir artifacts expanded
+          gh release download "$RELEASE_TAG" --dir artifacts
+
+          shopt -s nullglob
+          zips=(artifacts/*.zip)
+          checksums=(artifacts/*.sha256)
+          test "${#zips[@]}" -eq 1
+          test "${#checksums[@]}" -eq 1
+
+          (
+            cd artifacts
+            shasum -a 256 -c "$(basename "${checksums[0]}")"
+          )
+
+          ./script/audit_public_artifacts.sh archive "${zips[0]}"
+          ditto -x -k "${zips[0]}" expanded
+          app_bundle="$(find expanded -maxdepth 1 -type d -name '*.app' -print -quit)"
+          test -n "$app_bundle"
+          codesign --verify --deep --strict --verbose=2 "$app_bundle"
+          xcrun stapler validate "$app_bundle"
+          spctl --assess --type execute --verbose=4 "$app_bundle"
+
+          {
+            printf 'source_commit=%s\n' "$source_commit"
+            printf 'zip_path=%s\n' "${zips[0]}"
+            printf 'checksum_path=%s\n' "${checksums[0]}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create release-verification predicate
+        env:
+          SOURCE_COMMIT: ${{ steps.release.outputs.source_commit }}
+        run: |
+          jq -n \
+            --arg releaseTag "$RELEASE_TAG" \
+            --arg sourceCommit "$SOURCE_COMMIT" \
+            '{
+              releaseTag: $releaseTag,
+              sourceCommit: $sourceCommit,
+              checks: {
+                publishedChecksum: true,
+                cleanArchiveMetadata: true,
+                developerIDSignature: true,
+                stapledNotarizationTicket: true,
+                gatekeeperAcceptance: true
+              }
+            }' > "$RUNNER_TEMP/release-verification.json"
+
+      - name: Attest verified release artifact
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-checksums: ${{ steps.release.outputs.checksum_path }}
+          predicate-type: https://in-toto.io/attestation/release/v0.1
+          predicate-path: ${{ runner.temp }}/release-verification.json
+
+      - name: Verify published attestation
+        run: >-
+          gh attestation verify
+          "${{ steps.release.outputs.zip_path }}"
+          --repo "$GITHUB_REPOSITORY"
+          --predicate-type https://in-toto.io/attestation/release/v0.1

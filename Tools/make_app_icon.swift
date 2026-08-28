@@ -5,8 +5,108 @@ let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
 let assetsDirectory = root.appendingPathComponent("Assets", isDirectory: true)
 let iconsetDirectory = assetsDirectory.appendingPathComponent("AppIcon.iconset", isDirectory: true)
 let iconOutput = assetsDirectory.appendingPathComponent("AppIcon.icns")
+let pngSignature = Data([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+let prohibitedPNGChunks: Set<String> = ["eXIf", "iTXt", "tEXt", "zTXt", "tIME", "pHYs"]
 
 try FileManager.default.createDirectory(at: iconsetDirectory, withIntermediateDirectories: true)
+
+func readBigEndianUInt32(_ data: Data, at offset: Int) -> UInt32 {
+    (UInt32(data[offset]) << 24)
+        | (UInt32(data[offset + 1]) << 16)
+        | (UInt32(data[offset + 2]) << 8)
+        | UInt32(data[offset + 3])
+}
+
+func appendBigEndianUInt32(_ value: UInt32, to data: inout Data) {
+    data.append(contentsOf: [
+        UInt8((value >> 24) & 0xff),
+        UInt8((value >> 16) & 0xff),
+        UInt8((value >> 8) & 0xff),
+        UInt8(value & 0xff)
+    ])
+}
+
+func stripPublicPNGMetadata(_ data: Data) throws -> Data {
+    guard data.starts(with: pngSignature) else {
+        throw NSError(domain: "IconWriter", code: 1, userInfo: [NSLocalizedDescriptionKey: "Expected PNG data"])
+    }
+
+    var output = pngSignature
+    var cursor = pngSignature.count
+    var foundEnd = false
+
+    while cursor + 12 <= data.count {
+        let payloadLength = Int(readBigEndianUInt32(data, at: cursor))
+        guard payloadLength <= data.count - cursor - 12 else {
+            throw NSError(domain: "IconWriter", code: 1, userInfo: [NSLocalizedDescriptionKey: "Malformed PNG chunk"])
+        }
+
+        let chunkEnd = cursor + payloadLength + 12
+        let typeData = data.subdata(in: (cursor + 4)..<(cursor + 8))
+        guard let type = String(data: typeData, encoding: .ascii) else {
+            throw NSError(domain: "IconWriter", code: 1, userInfo: [NSLocalizedDescriptionKey: "Malformed PNG chunk type"])
+        }
+
+        if prohibitedPNGChunks.contains(type) == false {
+            output.append(data.subdata(in: cursor..<chunkEnd))
+        }
+        cursor = chunkEnd
+
+        if type == "IEND" {
+            foundEnd = true
+            break
+        }
+    }
+
+    guard foundEnd, cursor == data.count else {
+        throw NSError(domain: "IconWriter", code: 1, userInfo: [NSLocalizedDescriptionKey: "Malformed PNG trailer"])
+    }
+    return output
+}
+
+func stripEmbeddedICNSMetadata(at url: URL) throws {
+    let data = try Data(contentsOf: url)
+    guard
+        data.count >= 8,
+        data.prefix(4) == Data("icns".utf8),
+        Int(readBigEndianUInt32(data, at: 4)) == data.count
+    else {
+        throw NSError(domain: "IconWriter", code: 1, userInfo: [NSLocalizedDescriptionKey: "Malformed ICNS container"])
+    }
+
+    var output = Data("icns".utf8)
+    appendBigEndianUInt32(0, to: &output)
+    var cursor = 8
+
+    while cursor + 8 <= data.count {
+        let elementLength = Int(readBigEndianUInt32(data, at: cursor + 4))
+        guard elementLength >= 8, elementLength <= data.count - cursor else {
+            throw NSError(domain: "IconWriter", code: 1, userInfo: [NSLocalizedDescriptionKey: "Malformed ICNS element"])
+        }
+
+        let elementType = data.subdata(in: cursor..<(cursor + 4))
+        let payload = data.subdata(in: (cursor + 8)..<(cursor + elementLength))
+        let publicPayload = payload.starts(with: pngSignature)
+            ? try stripPublicPNGMetadata(payload)
+            : payload
+
+        output.append(elementType)
+        appendBigEndianUInt32(UInt32(publicPayload.count + 8), to: &output)
+        output.append(publicPayload)
+        cursor += elementLength
+    }
+
+    guard cursor == data.count, output.count <= UInt32.max else {
+        throw NSError(domain: "IconWriter", code: 1, userInfo: [NSLocalizedDescriptionKey: "Malformed ICNS trailer"])
+    }
+    output.replaceSubrange(4..<8, with: [
+        UInt8((UInt32(output.count) >> 24) & 0xff),
+        UInt8((UInt32(output.count) >> 16) & 0xff),
+        UInt8((UInt32(output.count) >> 8) & 0xff),
+        UInt8(UInt32(output.count) & 0xff)
+    ])
+    try output.write(to: url, options: .atomic)
+}
 
 extension NSColor {
     convenience init(hex: UInt32, alpha: CGFloat = 1) {
@@ -43,14 +143,26 @@ func strokeLine(from start: CGPoint, to end: CGPoint, width: CGFloat, color: NSC
     path.stroke()
 }
 
-func drawIcon(size: CGFloat) -> NSImage {
-    let image = NSImage(size: CGSize(width: size, height: size))
-    image.lockFocus()
-
-    guard let context = NSGraphicsContext.current?.cgContext else {
-        image.unlockFocus()
-        return image
+func drawIcon(size: CGFloat) throws -> CGImage {
+    guard
+        let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
+        let context = CGContext(
+            data: nil,
+            width: Int(size),
+            height: Int(size),
+            bitsPerComponent: 8,
+            bytesPerRow: Int(size) * 4,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        )
+    else {
+        throw NSError(domain: "IconWriter", code: 1, userInfo: [NSLocalizedDescriptionKey: "Could not create the sRGB icon canvas"])
     }
+    let graphicsContext = NSGraphicsContext(cgContext: context, flipped: false)
+
+    NSGraphicsContext.saveGraphicsState()
+    NSGraphicsContext.current = graphicsContext
+    defer { NSGraphicsContext.restoreGraphicsState() }
 
     let scale = size / 1024
     let canvas = CGRect(x: 0, y: 0, width: size, height: size)
@@ -136,21 +248,21 @@ func drawIcon(size: CGFloat) -> NSImage {
     outerStroke.lineWidth = 10 * scale
     outerStroke.stroke()
 
-    image.unlockFocus()
+    graphicsContext.flushGraphics()
+    guard let image = context.makeImage() else {
+        throw NSError(domain: "IconWriter", code: 1, userInfo: [NSLocalizedDescriptionKey: "Could not create the sRGB icon image"])
+    }
     return image
 }
 
 func writePNG(size: Int, name: String) throws {
-    let image = drawIcon(size: CGFloat(size))
-    guard
-        let tiff = image.tiffRepresentation,
-        let bitmap = NSBitmapImageRep(data: tiff),
-        let png = bitmap.representation(using: .png, properties: [:])
-    else {
+    let bitmap = NSBitmapImageRep(cgImage: try drawIcon(size: CGFloat(size)))
+    guard let png = bitmap.representation(using: .png, properties: [:]) else {
         throw NSError(domain: "IconWriter", code: 1, userInfo: [NSLocalizedDescriptionKey: "Could not render \(name)"])
     }
 
-    try png.write(to: iconsetDirectory.appendingPathComponent(name))
+    let outputURL = iconsetDirectory.appendingPathComponent(name)
+    try stripPublicPNGMetadata(png).write(to: outputURL, options: .atomic)
 }
 
 let requiredFiles: [(Int, String)] = [
@@ -179,5 +291,7 @@ process.waitUntilExit()
 if process.terminationStatus != 0 {
     throw NSError(domain: "IconWriter", code: Int(process.terminationStatus), userInfo: [NSLocalizedDescriptionKey: "iconutil failed"])
 }
+
+try stripEmbeddedICNSMetadata(at: iconOutput)
 
 print(iconOutput.path)

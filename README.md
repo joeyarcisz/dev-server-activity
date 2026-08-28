@@ -27,7 +27,15 @@ The release is signed with a Developer ID certificate, notarized by Apple, and r
 Each release includes a SHA-256 checksum file. From the directory containing both downloads:
 
 ```bash
-shasum -a 256 -c DevServerActivity-1.0.0-1-macos-arm64.sha256
+shasum -a 256 -c DevServerActivity-1.0.1-2-macos-arm64.sha256
+```
+
+With GitHub CLI installed, verify the repository's release-verification attestation:
+
+```bash
+gh attestation verify DevServerActivity-1.0.1-2-macos-arm64.zip \
+  --repo joeyarcisz/dev-server-activity \
+  --predicate-type https://in-toto.io/attestation/release/v0.1
 ```
 
 The expected Gatekeeper source is `Notarized Developer ID`. Do not bypass a macOS warning for a copy that fails verification.
@@ -45,13 +53,15 @@ When full process inspection is unavailable, the app can still probe a fixed lis
 
 ## Process safety
 
-Stopping a process is consequential, so Dev Server Activity checks the selected target again immediately before sending a signal. The PID must still have the same command line and must still own at least one expected listening port. If either check fails, nothing is stopped and the list is refreshed.
+Stopping a process is consequential, so the confirmation freezes the exact server shown in the dialog. Dev Server Activity records that process's launch time, then requires the same PID and launch time before and after revalidating its command line and listening ports. If any check fails, nothing is stopped and the list is refreshed.
 
 **Force Stop** can end a process without allowing it to save state. Review the process details and try **Stop** first.
 
 The app has no privileged helper and does not request administrator access. It can signal only processes allowed by the current macOS user account.
 
 See [Architecture](docs/ARCHITECTURE.md) for the scan and termination flow.
+
+Official release ZIPs are checked for local packaging metadata and receive a GitHub release-verification attestation after their published checksum, Developer ID signature, stapled notarization ticket, and Gatekeeper acceptance are independently rechecked in GitHub Actions.
 
 ## Privacy
 

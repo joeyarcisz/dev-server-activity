@@ -1,6 +1,6 @@
 import Foundation
 
-public struct DevServerDetector {
+public struct DevServerDetector: Sendable {
     public init() {}
 
     public func detect(records: [ListeningPortRecord], processes: [Int: ProcessSnapshot]) -> [DevServer] {
@@ -16,6 +16,7 @@ public struct DevServerDetector {
 
             return DevServer(
                 pid: pid,
+                processIdentity: process.processIdentity,
                 displayName: displayName(for: process),
                 kind: kind,
                 ports: ports,
