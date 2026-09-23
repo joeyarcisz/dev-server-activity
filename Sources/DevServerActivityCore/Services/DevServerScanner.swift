@@ -54,6 +54,12 @@ public struct DevServerScanner {
                 return fallbackServers
             }
 
+            // lsof uses exit 1 with no output when the selection has no matches.
+            if case CommandRunnerError.failed("/usr/sbin/lsof", 1, let output) = error,
+               output.trimmedNonEmpty == nil {
+                return []
+            }
+
             throw error
         }
 

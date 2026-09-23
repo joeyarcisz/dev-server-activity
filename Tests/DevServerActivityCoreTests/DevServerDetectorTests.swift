@@ -3,6 +3,101 @@ import XCTest
 @testable import DevServerActivityCore
 
 final class DevServerDetectorTests: XCTestCase {
+    func testFindsPlainNodeServersRegardlessOfProjectLocation() {
+        for directory in ["/Users/tester/Projects/api", "/Users/tester/src/api", "/tmp/api", ""] {
+            let process = ProcessSnapshot(
+                pid: 42, commandName: "/opt/homebrew/bin/node",
+                commandLine: "node server.js", workingDirectory: directory
+            )
+            let servers = DevServerDetector().detect(
+                records: [ListeningPortRecord(pid: 42, command: "node", host: "*", port: 3000)],
+                processes: [42: process]
+            )
+            XCTAssertEqual(servers.map(\.kind), [.node], "Missed project at \(directory)")
+        }
+    }
+
+    func testUnrelatedProcessesAreNotServersBecauseOfArgumentKeywords() {
+        for keyword in ["vite", "python", "ruby", "php", "node_modules", "next dev"] {
+            let process = ProcessSnapshot(
+                pid: 42, commandName: "/Applications/Example.app/Contents/MacOS/Example",
+                commandLine: "Example --project /Users/tester/Documents/\(keyword)",
+                workingDirectory: "/Users/tester/Documents"
+            )
+            XCTAssertTrue(DevServerDetector().detect(
+                records: [ListeningPortRecord(pid: 42, command: "Example", host: "*", port: 3000)],
+                processes: [42: process]
+            ).isEmpty, "Unrelated process accepted because of \(keyword)")
+        }
+    }
+
+    func testRuntimeClassificationIsNotOverriddenByProjectNames() {
+        let process = ProcessSnapshot(
+            pid: 42, commandName: "/opt/homebrew/bin/python3.13",
+            commandLine: "python3.13 /Users/tester/invite/server.py",
+            workingDirectory: "/Users/tester/invite"
+        )
+        let servers = DevServerDetector().detect(
+            records: [ListeningPortRecord(pid: 42, command: "python", host: "*", port: 8000)],
+            processes: [42: process]
+        )
+        XCTAssertEqual(servers.first?.kind, .python)
+    }
+
+    func testSupportedRuntimeExecutablesRemainRecognized() {
+        let examples: [(String, DevServerKind)] = [
+            ("node", .node), ("nodejs", .node), ("bun", .bun), ("deno", .deno),
+            ("python", .python), ("python3.13", .python), ("uvicorn", .python),
+            ("ruby", .ruby), ("rails", .ruby), ("php", .php), ("php8.3", .php),
+            ("next-server (v16.1.6)", .next)
+        ]
+        for (name, kind) in examples {
+            let process = ProcessSnapshot(
+                pid: 42, commandName: name, commandLine: "\(name) server",
+                workingDirectory: "/Users/tester/Projects/example"
+            )
+            XCTAssertEqual(DevServerDetector().detect(
+                records: [ListeningPortRecord(pid: 42, command: name, host: "*", port: 3000)],
+                processes: [42: process]
+            ).first?.kind, kind, name)
+        }
+    }
+
+    func testRecognizesFrameworkEntrypointsWithoutMatchingPartialProjectNames() {
+        let examples: [(String, DevServerKind)] = [
+            ("node /Projects/site/node_modules/.bin/vite --host", .vite),
+            ("node /Projects/site/node_modules/vite/bin/vite.js --host", .vite),
+            ("node /Projects/site/node_modules/next/dist/bin/next dev", .next),
+            ("node /Projects/invite/server.js", .node)
+        ]
+        for (commandLine, kind) in examples {
+            let process = ProcessSnapshot(
+                pid: 42, commandName: "node", commandLine: commandLine,
+                workingDirectory: "/Projects/site"
+            )
+            XCTAssertEqual(DevServerDetector().detect(
+                records: [ListeningPortRecord(pid: 42, command: "node", host: "*", port: 5173)],
+                processes: [42: process]
+            ).first?.kind, kind, commandLine)
+        }
+    }
+
+    func testNoListenersIsAnEmptySuccessfulScan() throws {
+        let scanner = DevServerScanner(
+            runner: EmptyLsofCommandRunner(),
+            fallbackScanner: FixedPortProbeScanner(servers: []), username: "tester"
+        )
+        XCTAssertEqual(try scanner.scan(), [])
+    }
+
+    func testRealInspectionFailureIsNotReportedAsAnEmptySuccessfulScan() {
+        let scanner = DevServerScanner(
+            runner: FailingCommandRunner(),
+            fallbackScanner: FixedPortProbeScanner(servers: []), username: "tester"
+        )
+        XCTAssertThrowsError(try scanner.scan())
+    }
+
     func testBuildsDevServersFromListeningPortsAndProcessDetails() {
         let records = [
             ListeningPortRecord(pid: 1905, command: "ControlCe", host: "*", port: 5000),
@@ -193,6 +288,12 @@ private struct FixedPortProbeScanner: PortProbeScanning {
 private struct FailingCommandRunner: CommandRunning {
     func run(_ executable: String, arguments: [String]) throws -> String {
         throw CommandRunnerError.failed(executable: executable, status: 1, output: "operation not permitted")
+    }
+}
+
+private struct EmptyLsofCommandRunner: CommandRunning {
+    func run(_ executable: String, arguments: [String]) throws -> String {
+        throw CommandRunnerError.failed(executable: executable, status: 1, output: "")
     }
 }
 

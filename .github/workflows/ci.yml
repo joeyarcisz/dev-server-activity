@@ -28,6 +28,9 @@ jobs:
       - name: Test release artifact audit
         run: ./script/test_artifact_audit.sh
 
+      - name: Test build/run argument validation
+        run: bash script/test_build_and_run.sh
+
       - name: Show Swift version
         run: swift --version
 

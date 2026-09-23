@@ -289,12 +289,17 @@ private final class CommandProcessController: @unchecked Sendable {
         }
         defer { posix_spawn_file_actions_destroy(&fileActions) }
 
-        for action in [
+        var actions = [
             posix_spawn_file_actions_adddup2(&fileActions, writeDescriptor, STDOUT_FILENO),
-            posix_spawn_file_actions_adddup2(&fileActions, writeDescriptor, STDERR_FILENO),
-            posix_spawn_file_actions_addclose(&fileActions, readDescriptor),
-            posix_spawn_file_actions_addclose(&fileActions, writeDescriptor)
-        ] {
+            posix_spawn_file_actions_adddup2(&fileActions, writeDescriptor, STDERR_FILENO)
+        ]
+        // Do not close a redirected standard stream if the parent had it closed
+        // and pipe() reused its descriptor number.
+        for descriptor in [readDescriptor, writeDescriptor] where descriptor > STDERR_FILENO {
+            actions.append(posix_spawn_file_actions_addclose(&fileActions, descriptor))
+        }
+        actions.append(posix_spawn_file_actions_addopen(&fileActions, STDIN_FILENO, "/dev/null", O_RDONLY, 0))
+        for action in actions {
             guard action == 0 else {
                 throw launchError(executable: executable, code: action)
             }
@@ -307,7 +312,9 @@ private final class CommandProcessController: @unchecked Sendable {
         }
         defer { posix_spawnattr_destroy(&attributes) }
 
-        result = posix_spawnattr_setflags(&attributes, Int16(POSIX_SPAWN_SETPGROUP))
+        result = posix_spawnattr_setflags(
+            &attributes, Int16(POSIX_SPAWN_SETPGROUP | POSIX_SPAWN_CLOEXEC_DEFAULT)
+        )
         guard result == 0 else {
             throw launchError(executable: executable, code: result)
         }
