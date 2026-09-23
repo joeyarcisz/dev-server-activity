@@ -1,6 +1,6 @@
 # Code of conduct
 
-Dev Server Activity welcomes constructive participation from people of all experience levels.
+Kill the Zombie Servers welcomes constructive participation from people of all experience levels.
 
 ## Expected behavior
 

@@ -1,6 +1,6 @@
 # Privacy
 
-Dev Server Activity is a local macOS utility. It does not collect or transmit personal data.
+Kill the Zombie Servers is a local macOS utility. It does not collect or transmit personal data.
 
 ## Data the app reads
 
@@ -11,7 +11,7 @@ To identify local development servers owned by the current user, the app invokes
 - Current working directories.
 - TCP listening hosts and ports.
 
-This information is displayed in the app and is not persisted by Dev Server Activity.
+This information is displayed in the app and is not persisted by Kill the Zombie Servers.
 
 If process inspection is unavailable, the app can test a fixed list of common ports on `127.0.0.1`. Opening a server sends its `http://localhost:<port>` address to the user's default browser.
 

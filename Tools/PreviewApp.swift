@@ -13,7 +13,7 @@ struct PreviewApp: App {
     private static var scenario: String { info["PreviewScenario"] as? String ?? "populated" }
 
     var body: some Scene {
-        WindowGroup("Dev Server Activity") {
+        WindowGroup("Kill the Zombie Servers") {
             ContentView(
                 store: store, automaticScanning: false,
                 initialSearch: Self.scenario == "filtered" ? "nothing-matches" : ""

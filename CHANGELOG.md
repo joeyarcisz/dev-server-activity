@@ -1,10 +1,18 @@
 # Changelog
 
-All notable changes to Dev Server Activity are recorded here.
+All notable changes to Kill the Zombie Servers (formerly Dev Server Activity) are recorded here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and releases use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [1.1.2] - 2026-09-23
+
+### Changed
+
+- Renamed the app to Kill the Zombie Servers, including its macOS display name, app bundle, download filenames, and public documentation.
+- Refreshed the README artwork and screenshot to match the current name and interface.
+- Preserved the bundle identifier, executable, repository URL, and all scan and process-stopping behavior.
 
 ## [1.1.1] - 2026-09-23
 

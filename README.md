@@ -1,6 +1,4 @@
-# Dev Server Activity
-
-## Kill the zombie servers.
+# Kill the Zombie Servers
 
 See what is still listening. Inspect the project, command, PID, and ports. Stop only what you choose.
 
@@ -10,15 +8,19 @@ See what is still listening. Inspect the project, command, PID, and ports. Stop 
 [![Latest release](https://img.shields.io/github/v/release/joeyarcisz/dev-server-activity)](https://github.com/joeyarcisz/dev-server-activity/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-0A7B83.svg)](LICENSE)
 
-![Kill the zombie servers. Dev Server Activity shows local servers with their project, command, PID, hosts, ports, and selected stop controls.](docs/images/kill-zombie-servers.png)
+![Kill the Zombie Servers: a native Mac app for inspecting local servers and stopping only what you choose.](docs/images/kill-zombie-servers.png)
 
-The app shows the actual process behind a local server and checks its identity again before it sends a stop signal. [See the unframed app screenshot](docs/images/dev-server-activity.png).
+The app shows the actual process behind a local server and checks its identity again before it sends a stop signal.
+
+![The current native interface showing project, process, PID, ports, and Stop controls with synthetic demo data.](docs/images/dev-server-activity.png)
+
+Screenshot uses synthetic demo projects, not a user's private workspace.
 
 ## Your coding agent moved on. Your servers didn’t.
 
 New prompt. New project. Another localhost URL. When you’re moving fast with AI coding tools, it’s easy to lose track of what you left running.
 
-Dev Server Activity puts the project, process, PID, and ports in one native Mac window. Keep what you need. Kill what you’re done with.
+Kill the Zombie Servers puts the project, process, PID, and ports in one native Mac window. Keep what you need. Kill what you’re done with.
 
 No terminal archaeology. No account. No cloud. Just your servers and an off switch.
 
@@ -29,19 +31,21 @@ Download the current Apple-silicon build from [GitHub Releases](https://github.c
 The release is signed with a Developer ID certificate, notarized by Apple, and requires macOS 14 or later.
 
 1. Download the ZIP and expand it.
-2. Move **Dev Server Activity.app** to Applications.
+2. Move **Kill the Zombie Servers.app** to Applications.
 3. Open the app normally.
+
+Upgrading from Dev Server Activity? Quit the old app first. This is the same app under a new name, with the same bundle identifier. After opening the new copy, remove the old **Dev Server Activity.app** to avoid keeping two copies.
 
 Each release includes a SHA-256 checksum file. From the directory containing both downloads:
 
 ```bash
-shasum -a 256 -c DevServerActivity-1.1.1-4-macos-arm64.sha256
+shasum -a 256 -c KillTheZombieServers-1.1.2-5-macos-arm64.sha256
 ```
 
 With GitHub CLI installed, verify the repository's release-verification attestation:
 
 ```bash
-gh attestation verify DevServerActivity-1.1.1-4-macos-arm64.zip \
+gh attestation verify KillTheZombieServers-1.1.2-5-macos-arm64.zip \
   --repo joeyarcisz/dev-server-activity \
   --predicate-type https://in-toto.io/attestation/release/v0.1
 ```
@@ -61,7 +65,7 @@ When full process inspection is unavailable, the app can still probe a fixed lis
 
 ## Process safety
 
-Stopping a process is consequential, so the confirmation freezes the exact server shown in the dialog. Dev Server Activity records that process's launch time, then requires the same PID and launch time before and after revalidating its command line and listening ports. If any check fails, nothing is stopped and the list is refreshed.
+Stopping a process is consequential, so the confirmation freezes the exact server shown in the dialog. Kill the Zombie Servers records that process's launch time, then requires the same PID and launch time before and after revalidating its command line and listening ports. If any check fails, nothing is stopped and the list is refreshed.
 
 **Force Stop** can end a process without allowing it to save state. Review the process details and try **Stop** first.
 
@@ -73,7 +77,7 @@ Official release ZIPs are checked for local packaging metadata and receive a Git
 
 ## Privacy
 
-Dev Server Activity has no accounts, analytics, advertising, telemetry, or cloud service. Process inspection stays on your Mac. The app reads local process and listening-port information and connects only to localhost when probing or opening a server.
+Kill the Zombie Servers has no accounts, analytics, advertising, telemetry, or cloud service. Process inspection stays on your Mac. The app reads local process and listening-port information and connects only to localhost when probing or opening a server.
 
 See [Privacy](PRIVACY.md) for the complete data-flow statement.
 
@@ -108,4 +112,4 @@ Bug reports and focused pull requests are welcome. Read [Contributing](CONTRIBUT
 
 ## License
 
-The source code is available under the [MIT License](LICENSE). The Dev Server Activity name and app icon identify the original project; modified distributions should avoid implying that Joey Arcisz produced or endorsed them.
+The source code is available under the [MIT License](LICENSE). The Kill the Zombie Servers name and app icon identify the original project; modified distributions should avoid implying that Joey Arcisz produced or endorsed them.

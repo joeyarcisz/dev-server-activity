@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve Dev Server Activity. Small, focused changes with clear evidence are easiest to review.
+Thanks for helping improve Kill the Zombie Servers. Small, focused changes with clear evidence are easiest to review.
 
 ## Before opening a pull request
 

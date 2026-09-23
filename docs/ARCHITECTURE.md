@@ -1,6 +1,6 @@
 # Architecture
 
-Dev Server Activity is a Swift Package with a SwiftUI executable and a separately testable core library. It has no third-party runtime dependencies.
+Kill the Zombie Servers is a Swift Package with a SwiftUI executable and a separately testable core library. It has no third-party runtime dependencies. The package, executable, and core module retain their `DevServerActivity` names for compatibility.
 
 ## Scan flow
 
