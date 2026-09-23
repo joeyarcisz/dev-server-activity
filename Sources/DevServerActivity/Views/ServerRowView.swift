@@ -7,28 +7,32 @@ struct ServerRowView: View {
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: server.kind.symbolName)
-                .foregroundStyle(ActivityTheme.accent)
-                .frame(width: 26, height: 26)
-                .background(ActivityTheme.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(server.displayName)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(ActivityTheme.bone)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(.secondary)
+                .frame(width: 20)
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(server.displayName)
+                        .font(.system(size: 13, weight: .semibold))
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                    if let port = server.primaryPort {
+                        Text(verbatim: ":\(port)" + (server.ports.count > 1 ? " +\(server.ports.count - 1)" : ""))
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                            .fixedSize()
+                    }
+                }
+                Text(server.workingDirectory.isEmpty ? "Port only · process unavailable" : (server.workingDirectory as NSString).abbreviatingWithTildeInPath)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
                     .lineLimit(1)
-
-                Text("\(server.kind.label)  ·  :\(server.portSummary)")
-                    .font(.caption)
-                    .foregroundStyle(ActivityTheme.muted)
-                    .lineLimit(1)
-
-                Text(server.workingDirectory)
-                    .font(.caption2)
-                    .foregroundStyle(ActivityTheme.muted)
-                    .lineLimit(1)
+                    .truncationMode(.middle)
             }
         }
-        .padding(.vertical, 5)
-        .accessibilityLabel("\(server.displayName), \(server.kind.label), port \(server.portSummary), project \(server.workingDirectory)")
+        .padding(.vertical, 8)
+        .help("\(server.kind.label) · \(server.workingDirectory) · ports \(server.portSummary)")
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(server.displayName), \(server.kind.label), ports \(server.portSummary), project \(server.workingDirectory)")
     }
 }

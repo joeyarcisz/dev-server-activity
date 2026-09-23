@@ -1,11 +1,22 @@
+import AppKit
 import SwiftUI
 
 enum ActivityTheme {
-    static let canvas = Color(red: 0.047, green: 0.047, blue: 0.047)
-    static let sidebar = Color(red: 0.075, green: 0.075, blue: 0.075)
-    static let surface = Color(red: 0.12, green: 0.12, blue: 0.12)
-    static let accent = Color(red: 0.937, green: 0.22, blue: 0.184)
-    static let bone = Color(red: 0.949, green: 0.933, blue: 0.902)
-    static let muted = Color(red: 0.69, green: 0.67, blue: 0.64)
-    static let hairline = Color.white.opacity(0.12)
+    static let canvas = adaptive(light: 0xFAF9F6, dark: 0x191A1C)
+    static let well = adaptive(light: 0xF0EFEB, dark: 0x232427)
+    static let accent = adaptive(light: 0xB53730, dark: 0xF4776A)
+    static let stop = Color(red: 0.72, green: 0.20, blue: 0.17)
+    static let rule = Color.primary.opacity(0.10)
+
+    private static func adaptive(light: UInt32, dark: UInt32) -> Color {
+        Color(nsColor: NSColor(name: nil) { appearance in
+            let value = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? dark : light
+            return NSColor(
+                srgbRed: CGFloat((value >> 16) & 255) / 255,
+                green: CGFloat((value >> 8) & 255) / 255,
+                blue: CGFloat(value & 255) / 255,
+                alpha: 1
+            )
+        })
+    }
 }
