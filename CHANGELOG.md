@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-23
+
+### Changed
+
+- Redesigned the native window with adaptive light and dark appearances, clearer server identity, and readable project paths and commands.
+- Moved search into the compact server sidebar and kept the selected server synchronized with visible search results.
+- Kept Stop and Force Stop visible at the minimum window size, with distinct controls and the existing confirmation and process-identity safeguards.
+- Improved Auto refresh toolbar spacing and control sizing.
+- Updated the GitHub introduction with the zombie-server campaign and added development-only native UI previews with synthetic data.
+
 ## [1.0.1] - 2026-08-27
 
 ### Security
@@ -31,6 +41,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Read-only common-port fallback when macOS does not expose process details.
 - Developer ID signing, Apple notarization, stapling, and Gatekeeper verification for the Apple-silicon release.
 
-[Unreleased]: https://github.com/joeyarcisz/dev-server-activity/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/joeyarcisz/dev-server-activity/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/joeyarcisz/dev-server-activity/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/joeyarcisz/dev-server-activity/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/joeyarcisz/dev-server-activity/releases/tag/v1.0.0
