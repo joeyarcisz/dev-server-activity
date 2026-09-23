@@ -14,11 +14,13 @@ See what is still listening. Inspect the project, command, PID, and ports. Stop 
 
 The app shows the actual process behind a local server and checks its identity again before it sends a stop signal. [See the unframed app screenshot](docs/images/dev-server-activity.png).
 
-## Why it exists
+## Your coding agent moved on. Your servers didn’t.
 
-I built Dev Server Activity after opening it and discovering at least 12 local development servers I did not know were still running. `lsof` and `ps` had the raw facts, but I wanted the project folder, full command, PID, hosts, and listening ports in one place before stopping anything.
+New prompt. New project. Another localhost URL. When you’re moving fast with AI coding tools, it’s easy to lose track of what you left running.
 
-A port number is not an identity. The app keeps the choice with the person at the keyboard and checks the selected process again immediately before sending a signal.
+Dev Server Activity puts the project, process, PID, and ports in one native Mac window. Keep what you need. Kill what you’re done with.
+
+No terminal archaeology. No account. No cloud. Just your servers and an off switch.
 
 ## Download
 
