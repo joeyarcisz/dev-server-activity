@@ -3,7 +3,7 @@ set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-Build, Developer ID sign, notarize, staple, archive, and verify Dev Server Activity.
+Build, Developer ID sign, notarize, staple, archive, and verify Kill the Zombie Servers.
 
 Required environment:
   DEVELOPER_ID_APPLICATION  Exact installed Developer ID Application identity
@@ -94,7 +94,7 @@ case "$ARCHS" in
   *) fail "unsupported release architecture set: $ARCHS" ;;
 esac
 
-ARTIFACT_STEM="$PRODUCT_NAME-$MARKETING_VERSION-$CURRENT_PROJECT_VERSION-macos-$ARCH_LABEL"
+ARTIFACT_STEM="$RELEASE_NAME-$MARKETING_VERSION-$CURRENT_PROJECT_VERSION-macos-$ARCH_LABEL"
 RELEASE_DIR="$RELEASE_OUTPUT_ROOT/$ARTIFACT_STEM"
 FINAL_APP="$RELEASE_DIR/$APP_NAME.app"
 FINAL_ZIP="$RELEASE_DIR/$ARTIFACT_STEM.zip"
@@ -125,6 +125,8 @@ INFO_PLIST="$APP_BUNDLE/Contents/Info.plist"
 /usr/bin/plutil -lint "$ENTITLEMENTS_CAPTURE" >/dev/null || fail "signed entitlements are not a valid plist"
 
 ACTUAL_BUNDLE_ID="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$INFO_PLIST")"
+ACTUAL_APP_NAME="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$INFO_PLIST")"
+ACTUAL_DISPLAY_NAME="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$INFO_PLIST")"
 ACTUAL_MARKETING_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$INFO_PLIST")"
 ACTUAL_BUILD_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$INFO_PLIST")"
 ACTUAL_MIN_SYSTEM_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$INFO_PLIST")"
@@ -134,6 +136,8 @@ ACTUAL_ICON_FILE="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIconFile' "$INFO_
 ACTUAL_CATEGORY="$(/usr/libexec/PlistBuddy -c 'Print :LSApplicationCategoryType' "$INFO_PLIST")"
 
 [ "$ACTUAL_BUNDLE_ID" = "$BUNDLE_ID" ] || fail "bundle identifier mismatch"
+[ "$ACTUAL_APP_NAME" = "$APP_NAME" ] || fail "app name mismatch"
+[ "$ACTUAL_DISPLAY_NAME" = "$APP_NAME" ] || fail "display name mismatch"
 [ "$ACTUAL_MARKETING_VERSION" = "$MARKETING_VERSION" ] || fail "marketing version mismatch"
 [ "$ACTUAL_BUILD_VERSION" = "$CURRENT_PROJECT_VERSION" ] || fail "build version mismatch"
 [ "$ACTUAL_MIN_SYSTEM_VERSION" = "$MIN_SYSTEM_VERSION" ] || fail "minimum macOS metadata mismatch"
@@ -213,7 +217,7 @@ VERIFIED_APP="$VERIFY_DIR/$APP_NAME.app"
 )
 
 {
-  printf 'Dev Server Activity direct-release verification\n'
+  printf '%s direct-release verification\n' "$APP_NAME"
   printf 'Generated (UTC): %s\n' "$(/bin/date -u '+%Y-%m-%dT%H:%M:%SZ')"
   printf 'Source commit: %s\n' "$SOURCE_COMMIT"
   printf 'Bundle ID: %s\n' "$ACTUAL_BUNDLE_ID"

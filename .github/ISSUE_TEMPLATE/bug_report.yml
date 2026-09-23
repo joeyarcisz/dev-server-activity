@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible problem with Dev Server Activity.
+description: Report a reproducible problem with Kill the Zombie Servers.
 title: "[Bug]: "
 body:
   - type: markdown

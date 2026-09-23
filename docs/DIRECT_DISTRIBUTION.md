@@ -1,11 +1,13 @@
 # Direct distribution
 
-Dev Server Activity ships through GitHub Releases as a Developer ID-signed and Apple-notarized direct download. It is intentionally not sandboxed: the full app must inspect current-user listening processes and send `SIGTERM` or `SIGKILL` to the exact server the user confirms.
+Kill the Zombie Servers ships through GitHub Releases as a Developer ID-signed and Apple-notarized direct download. It is intentionally not sandboxed: the full app must inspect current-user listening processes and send `SIGTERM` or `SIGKILL` to the exact server the user confirms.
 
 ## Supported release
 
 - Bundle ID: `com.joeyarcisz.DevServerActivity`
-- Version: `1.1.1` (`4`)
+- App name: `Kill the Zombie Servers`
+- Executable: `DevServerActivity` (unchanged)
+- Version: `1.1.2` (`5`)
 - Minimum macOS: 14.0
 - Current binary architecture: Apple silicon (`arm64`)
 - Distribution: [GitHub Releases](https://github.com/joeyarcisz/dev-server-activity/releases)
@@ -67,7 +69,7 @@ Packaging does not prove behavior. Before publication, launch the expanded notar
 7. Confirm that the release-verification workflow attests the downloaded ZIP after checksum, archive, signature, staple, and Gatekeeper checks pass.
 
 ```bash
-gh attestation verify DevServerActivity-1.1.1-4-macos-arm64.zip \
+gh attestation verify KillTheZombieServers-1.1.2-5-macos-arm64.zip \
   --repo joeyarcisz/dev-server-activity \
   --predicate-type https://in-toto.io/attestation/release/v0.1
 ```

@@ -1,6 +1,6 @@
 # Security policy
 
-Dev Server Activity inspects and can terminate local processes. Reports involving confirmation binding, PID reuse, process launch identity, command validation, listening-port validation, signing, release integrity, or unexpected data transfer are treated as security-sensitive.
+Kill the Zombie Servers inspects and can terminate local processes. Reports involving confirmation binding, PID reuse, process launch identity, command validation, listening-port validation, signing, release integrity, or unexpected data transfer are treated as security-sensitive.
 
 ## Supported versions
 
@@ -10,7 +10,7 @@ Security fixes are provided for the current release. Older releases may not rece
 
 Do not open a public issue for a vulnerability.
 
-Use GitHub's [private vulnerability reporting form](https://github.com/joeyarcisz/dev-server-activity/security/advisories/new). If that form is unavailable, email `intake@gearedlikeamachine.com` with the subject `Dev Server Activity security report`.
+Use GitHub's [private vulnerability reporting form](https://github.com/joeyarcisz/dev-server-activity/security/advisories/new). If that form is unavailable, email `intake@gearedlikeamachine.com` with the subject `Kill the Zombie Servers security report`.
 
 Include:
 
