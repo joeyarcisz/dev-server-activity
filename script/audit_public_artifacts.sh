@@ -151,6 +151,7 @@ audit_archive() {
   /usr/bin/python3 - "$archive" <<'PY'
 import stat
 import sys
+import unicodedata
 import zipfile
 
 archive_path = sys.argv[1]
@@ -175,8 +176,15 @@ def reject(message: str) -> None:
     raise SystemExit(2)
 
 
+def inspect_metadata(data: bytes) -> None:
+    for marker, description in prohibited_markers:
+        if marker in data.lower():
+            reject(f"archive metadata embeds {description}")
+
+
 try:
     with zipfile.ZipFile(archive_path, "r") as archive:
+        inspect_metadata(archive.comment)
         entries = archive.infolist()
         if not entries:
             reject("archive is empty")
@@ -187,6 +195,8 @@ try:
         normalized_names: set[str] = set()
 
         for entry in entries:
+            inspect_metadata(entry.extra)
+            inspect_metadata(entry.comment)
             name = entry.filename
             normalized = name.replace("\\", "/")
             components = [component for component in normalized.split("/") if component not in ("", ".")]
@@ -200,7 +210,9 @@ try:
             if not components:
                 reject(f"archive contains an invalid path: {name}")
 
-            canonical_name = "/".join(components)
+            # Public Mac archives must not overwrite files on case-insensitive,
+            # normalization-insensitive destination volumes.
+            canonical_name = unicodedata.normalize("NFD", "/".join(components)).casefold()
             if canonical_name in normalized_names:
                 reject(f"archive contains a duplicate normalized path: {name}")
             normalized_names.add(canonical_name)

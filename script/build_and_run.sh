@@ -8,6 +8,14 @@ source "$ROOT_DIR/Config/app.env"
 APP_BUNDLE="$ROOT_DIR/dist/$APP_NAME.app"
 APP_BINARY="$APP_BUNDLE/Contents/MacOS/$PRODUCT_NAME"
 
+case "$MODE" in
+  run|--debug|debug|--logs|logs|--telemetry|telemetry|--verify|verify) ;;
+  *)
+    echo "usage: $0 [run|--debug|--logs|--telemetry|--verify]" >&2
+    exit 2
+    ;;
+esac
+
 pkill -x "$PROCESS_NAME" >/dev/null 2>&1 || true
 
 CONFIGURATION=debug \
@@ -39,9 +47,5 @@ case "$MODE" in
     open_app
     sleep 1
     pgrep -x "$PROCESS_NAME" >/dev/null
-    ;;
-  *)
-    echo "usage: $0 [run|--debug|--logs|--telemetry|--verify]" >&2
-    exit 2
     ;;
 esac

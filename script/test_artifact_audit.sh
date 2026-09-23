@@ -7,6 +7,7 @@ trap '/bin/rm -rf "$TMP_DIR"' EXIT
 
 /usr/bin/python3 - "$TMP_DIR" <<'PY'
 from pathlib import Path
+import struct
 import sys
 import zipfile
 
@@ -32,6 +33,29 @@ with zipfile.ZipFile(root / "embedded-build-path.zip", "w", compression=zipfile.
     )
 
 (root / "malformed.zip").write_bytes(b"not a ZIP archive")
+
+with zipfile.ZipFile(root / "case-collision.zip", "w") as archive:
+    archive.writestr("App.app/Contents/Info.plist", b"first")
+    archive.writestr("app.app/contents/info.plist", b"second")
+
+with zipfile.ZipFile(root / "unicode-collision.zip", "w") as archive:
+    archive.writestr("App.app/Resources/caf\u00e9", b"first")
+    archive.writestr("App.app/Resources/cafe\u0301", b"second")
+
+with zipfile.ZipFile(root / "metadata-extra.zip", "w") as archive:
+    entry = zipfile.ZipInfo("App.app/Contents/Info.plist")
+    payload = b"com.apple.provenance"
+    entry.extra = struct.pack("<HH", 0xCAFE, len(payload)) + payload
+    archive.writestr(entry, b"otherwise clean")
+
+with zipfile.ZipFile(root / "metadata-comment.zip", "w") as archive:
+    archive.comment = b"built in /Users/tester/project"
+    archive.writestr("App.app/Contents/Info.plist", b"otherwise clean")
+
+with zipfile.ZipFile(root / "entry-comment.zip", "w") as archive:
+    entry = zipfile.ZipInfo("App.app/Contents/Info.plist")
+    entry.comment = b"com.apple.quarantine"
+    archive.writestr(entry, b"otherwise clean")
 PY
 
 "$ROOT_DIR/script/audit_public_artifacts.sh" archive "$TMP_DIR/clean.zip" >/dev/null
@@ -42,7 +66,12 @@ for unsafe_archive in \
   "$TMP_DIR/disguised-metadata.zip" \
   "$TMP_DIR/path-traversal.zip" \
   "$TMP_DIR/embedded-build-path.zip" \
-  "$TMP_DIR/malformed.zip"
+  "$TMP_DIR/malformed.zip" \
+  "$TMP_DIR/case-collision.zip" \
+  "$TMP_DIR/unicode-collision.zip" \
+  "$TMP_DIR/metadata-extra.zip" \
+  "$TMP_DIR/metadata-comment.zip" \
+  "$TMP_DIR/entry-comment.zip"
 do
   if "$ROOT_DIR/script/audit_public_artifacts.sh" archive "$unsafe_archive" >/dev/null 2>&1; then
     printf 'artifact audit test failed: unsafe archive was accepted: %s\n' "$unsafe_archive" >&2

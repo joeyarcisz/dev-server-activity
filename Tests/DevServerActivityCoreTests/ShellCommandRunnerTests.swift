@@ -4,6 +4,67 @@ import XCTest
 @testable import DevServerActivityCore
 
 final class ShellCommandRunnerTests: XCTestCase {
+    func testConcurrentCommandsKeepTheirOutputIsolated() {
+        let runner = ShellCommandRunner(timeout: 5)
+        DispatchQueue.concurrentPerform(iterations: 32) { index in
+            do {
+                let expected = "command-\(index)"
+                let actual = try runner.run("/usr/bin/printf", arguments: [expected])
+                XCTAssertEqual(actual, expected)
+            } catch {
+                XCTFail("Concurrent command failed: \(error)")
+            }
+        }
+    }
+
+    func testChildDoesNotInheritUnrelatedOpenFileDescriptors() throws {
+        let original = Darwin.open("/dev/null", O_RDONLY)
+        XCTAssertGreaterThanOrEqual(original, 0)
+        guard original >= 0 else { return }
+        defer { Darwin.close(original) }
+        let descriptor = Darwin.fcntl(original, F_DUPFD, 100)
+        XCTAssertGreaterThanOrEqual(descriptor, 100)
+        guard descriptor >= 100 else { return }
+        defer { Darwin.close(descriptor) }
+
+        let output = try ShellCommandRunner().run("/bin/sh", arguments: [
+            "-c", "if test -e /dev/fd/\(descriptor); then printf inherited; else printf closed; fi"
+        ])
+        XCTAssertEqual(output, "closed")
+    }
+
+    func testCapturesStderrAndNonzeroExitStatus() {
+        XCTAssertThrowsError(try ShellCommandRunner().run(
+            "/bin/sh", arguments: ["-c", "printf diagnostic >&2; exit 7"]
+        )) { error in
+            guard case CommandRunnerError.failed("/bin/sh", 7, "diagnostic") = error else {
+                return XCTFail("unexpected error: \(error)")
+            }
+        }
+    }
+
+    func testRejectsNULArgumentsBeforeLaunching() {
+        XCTAssertThrowsError(try ShellCommandRunner().run("/usr/bin/printf", arguments: ["bad\0argument"])) { error in
+            guard case CommandExecutionError.launchFailed = error else {
+                return XCTFail("expected launchFailed, got \(error)")
+            }
+        }
+    }
+
+    func testRejectsInvalidUTF8Output() {
+        XCTAssertThrowsError(try ShellCommandRunner().run("/usr/bin/printf", arguments: ["\\377"])) { error in
+            guard case CommandExecutionError.invalidUTF8 = error else {
+                return XCTFail("expected invalidUTF8, got \(error)")
+            }
+        }
+    }
+
+    func testAcceptsOutputExactlyAtTheLimit() throws {
+        XCTAssertEqual(try ShellCommandRunner(timeout: 1, maximumOutputBytes: 4).run(
+            "/usr/bin/printf", arguments: ["1234"]
+        ), "1234")
+    }
+
     func testDrainsOutputLargerThanPipeCapacity() throws {
         let runner = ShellCommandRunner(timeout: 2, maximumOutputBytes: 1_000_000)
 

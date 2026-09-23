@@ -6,6 +6,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-09-23
+
+### Fixed
+
+- Detect plain Node servers outside conventional project folders, including when the project directory is unavailable.
+- Identify supported runtimes by executable name instead of unrelated project names or argument keywords, while preserving Vite and Next entrypoint recognition.
+- Treat an empty `lsof` no-match result as a successful scan instead of an error.
+- Prevent inspection commands from inheriting unrelated open file descriptors and explicitly configure their standard streams.
+- Reject case-colliding and Unicode-equivalent archive paths, and inspect ZIP comments and entry extra metadata for prohibited local metadata.
+- Validate launcher arguments before stopping the app or starting a build.
+- Distinguish an unavailable project folder from an unavailable process in server rows.
+
+### Added
+
+- Regression and disposable-server integration tests, bringing the suite to 51 tests, including real Stop and Force Stop checks.
+- CI coverage for launcher argument validation.
+
 ## [1.1.0] - 2026-09-23
 
 ### Changed
@@ -46,7 +63,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Read-only common-port fallback when macOS does not expose process details.
 - Developer ID signing, Apple notarization, stapling, and Gatekeeper verification for the Apple-silicon release.
 
-[Unreleased]: https://github.com/joeyarcisz/dev-server-activity/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/joeyarcisz/dev-server-activity/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/joeyarcisz/dev-server-activity/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/joeyarcisz/dev-server-activity/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/joeyarcisz/dev-server-activity/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/joeyarcisz/dev-server-activity/releases/tag/v1.0.0

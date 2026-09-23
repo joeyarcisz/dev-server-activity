@@ -23,7 +23,9 @@ struct ServerRowView: View {
                             .fixedSize()
                     }
                 }
-                Text(server.workingDirectory.isEmpty ? "Port only · process unavailable" : (server.workingDirectory as NSString).abbreviatingWithTildeInPath)
+                Text(server.workingDirectory.isEmpty
+                     ? (server.pid == nil ? "Port only · process unavailable" : "Project folder unavailable")
+                     : (server.workingDirectory as NSString).abbreviatingWithTildeInPath)
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)

@@ -37,16 +37,22 @@ public struct DevServerDetector: Sendable {
     }
 
     private func classify(process: ProcessSnapshot) -> DevServerKind {
-        let text = normalized("\(process.commandName) \(process.commandLine)")
+        let executable = (process.commandName as NSString).lastPathComponent.lowercased()
+        if executable == "next-server" || executable.hasPrefix("next-server (") { return .next }
+        if executable == "bun" { return .bun }
+        if executable == "deno" { return .deno }
+        if executable.range(of: #"^python([0-9]+(\.[0-9]+)*)?$"#, options: .regularExpression) != nil
+            || ["uvicorn", "flask", "django-admin", "fastapi"].contains(executable) { return .python }
+        if executable.range(of: #"^ruby([0-9]+(\.[0-9]+)*)?$"#, options: .regularExpression) != nil
+            || executable == "rails" { return .ruby }
+        if executable.range(of: #"^php([0-9]+(\.[0-9]+)*)?$"#, options: .regularExpression) != nil { return .php }
 
-        if containsAny(text, ["vite", "node_modules/.bin/vite"]) { return .vite }
-        if containsAny(text, ["next-server", "next dev", "/next "]) { return .next }
-        if containsAny(text, ["bun "]) || text.hasPrefix("bun ") { return .bun }
-        if containsAny(text, ["deno "]) || text.hasPrefix("deno ") { return .deno }
-        if containsAny(text, ["python", "uvicorn", "flask", "django", "fastapi"]) { return .python }
-        if containsAny(text, ["ruby", "rails"]) { return .ruby }
-        if containsAny(text, ["php"]) { return .php }
-        if containsAny(text, ["node", "npm", "pnpm", "yarn", "tsx", "ts-node", "webpack", "parcel", "astro", "nuxt", "remix", "svelte"]) {
+        // Match the runtime, not arbitrary project names or arguments of another app.
+        let nodeCommands = ["node", "nodejs", "npm", "pnpm", "yarn", "tsx", "ts-node"]
+        if nodeCommands.contains(executable) || ["npm ", "pnpm ", "yarn "].contains(where: executable.hasPrefix) {
+            let commandLine = process.commandLine.lowercased()
+            if commandLine.range(of: #"(^|[/\s])vite(\.js)?(\s|$)"#, options: .regularExpression) != nil { return .vite }
+            if commandLine.range(of: #"(^|[/\s])(next|next-server)(\s|$)"#, options: .regularExpression) != nil { return .next }
             return .node
         }
 
@@ -63,23 +69,6 @@ public struct DevServerDetector: Sendable {
             "/library/application support/adobe/"
         ]) {
             return false
-        }
-
-        if kind == .node {
-            return containsAny(text, [
-                "/documents/",
-                "/desktop/",
-                "/volumes/",
-                "/.trash/",
-                "/.codex/",
-                "node_modules",
-                "next",
-                "vite",
-                "astro",
-                "nuxt",
-                "remix",
-                "svelte"
-            ])
         }
 
         return true
