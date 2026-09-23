@@ -1,3 +1,4 @@
+import Combine
 import DevServerActivityCore
 import SwiftUI
 
@@ -87,26 +88,34 @@ private struct ServerSummaryBar: View {
     let lastRefresh: Date?
 
     var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "network")
-                .foregroundStyle(.secondary)
-                .frame(width: 18)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("\(count) Running")
-                    .font(.headline)
-                Text(lastRefreshText)
-                    .font(.caption)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(count == 0 ? Color.secondary : Color.red)
+                    .frame(width: 7, height: 7)
+                Text("LOCALHOST")
+                    .font(.caption2.weight(.bold))
+                    .tracking(1.4)
                     .foregroundStyle(.secondary)
+                Spacer()
+                if isRefreshing {
+                    ProgressView()
+                        .scaleEffect(0.65)
+                        .frame(width: 18, height: 18)
+                }
             }
 
-            Spacer()
+            Text("\(count) running")
+                .font(.title2.weight(.bold))
+                .monospacedDigit()
 
-            if isRefreshing {
-                ProgressView()
-                    .scaleEffect(0.65)
-                    .frame(width: 18, height: 18)
-            }
+            Text("See what is still listening.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Text(lastRefreshText)
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
         }
     }
 
@@ -124,9 +133,9 @@ private struct EmptySidebarView: View {
             Image(systemName: hasServers ? "magnifyingglass" : "powerplug")
                 .font(.system(size: 28))
                 .foregroundStyle(.secondary)
-            Text(hasServers ? "No Matches" : "No Servers")
+            Text(hasServers ? "No Matches" : "No Servers Found")
                 .font(.headline)
-            Text(hasServers ? "Clear the filter to see running servers." : "Nothing is listening as a local dev server right now.")
+            Text(hasServers ? "Clear the filter to see running servers." : "No local dev servers found in this scan.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -141,9 +150,9 @@ private struct EmptyDetailView: View {
 
     var body: some View {
         ContentUnavailableView {
-            Label("No Server Selected", systemImage: "network.slash")
+            Label("See what is still listening", systemImage: "network")
         } description: {
-            Text("Refresh to scan for local dev servers.")
+            Text("Select a server to review its project, command, PID, and ports before you stop it.")
         } actions: {
             Button(action: refresh) {
                 Label("Refresh", systemImage: "arrow.clockwise")

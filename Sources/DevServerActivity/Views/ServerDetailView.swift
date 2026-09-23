@@ -106,6 +106,10 @@ struct ServerDetailView: View {
                 }
                 .font(.callout)
                 .foregroundStyle(.secondary)
+
+                Text("A port number is not an identity. Review the process before stopping it.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Spacer()
