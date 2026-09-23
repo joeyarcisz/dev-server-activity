@@ -33,13 +33,13 @@ The release is signed with a Developer ID certificate, notarized by Apple, and r
 Each release includes a SHA-256 checksum file. From the directory containing both downloads:
 
 ```bash
-shasum -a 256 -c DevServerActivity-1.1.0-3-macos-arm64.sha256
+shasum -a 256 -c DevServerActivity-1.1.1-4-macos-arm64.sha256
 ```
 
 With GitHub CLI installed, verify the repository's release-verification attestation:
 
 ```bash
-gh attestation verify DevServerActivity-1.1.0-3-macos-arm64.zip \
+gh attestation verify DevServerActivity-1.1.1-4-macos-arm64.zip \
   --repo joeyarcisz/dev-server-activity \
   --predicate-type https://in-toto.io/attestation/release/v0.1
 ```

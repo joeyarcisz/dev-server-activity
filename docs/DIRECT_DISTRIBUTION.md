@@ -5,7 +5,7 @@ Dev Server Activity ships through GitHub Releases as a Developer ID-signed and A
 ## Supported release
 
 - Bundle ID: `com.joeyarcisz.DevServerActivity`
-- Version: `1.1.0` (`3`)
+- Version: `1.1.1` (`4`)
 - Minimum macOS: 14.0
 - Current binary architecture: Apple silicon (`arm64`)
 - Distribution: [GitHub Releases](https://github.com/joeyarcisz/dev-server-activity/releases)
@@ -67,7 +67,7 @@ Packaging does not prove behavior. Before publication, launch the expanded notar
 7. Confirm that the release-verification workflow attests the downloaded ZIP after checksum, archive, signature, staple, and Gatekeeper checks pass.
 
 ```bash
-gh attestation verify DevServerActivity-1.1.0-3-macos-arm64.zip \
+gh attestation verify DevServerActivity-1.1.1-4-macos-arm64.zip \
   --repo joeyarcisz/dev-server-activity \
   --predicate-type https://in-toto.io/attestation/release/v0.1
 ```
