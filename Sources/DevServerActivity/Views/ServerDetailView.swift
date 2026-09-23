@@ -19,7 +19,7 @@ struct ServerDetailView: View {
                     StatusBanner(text: store.statusMessage, systemImage: "checkmark.circle", tint: .green)
                 }
 
-                GroupBox("Addresses") {
+                GroupBox("ADDRESSES") {
                     VStack(alignment: .leading, spacing: 10) {
                         ForEach(server.ports, id: \.self) { port in
                             HStack {
@@ -38,7 +38,7 @@ struct ServerDetailView: View {
                     .padding(.vertical, 4)
                 }
 
-                GroupBox("Process") {
+                GroupBox("PROCESS IDENTITY") {
                     VStack(alignment: .leading, spacing: 12) {
                         DetailRow(label: "Project", value: server.workingDirectory)
                         DetailRow(label: "PID", value: server.pid.map(String.init) ?? "Unavailable")
@@ -51,6 +51,8 @@ struct ServerDetailView: View {
             }
             .padding(24)
         }
+        .groupBoxStyle(ActivitySectionStyle())
+        .background(ActivityTheme.canvas)
         .safeAreaInset(edge: .bottom) {
             actionBar
         }
@@ -82,13 +84,21 @@ struct ServerDetailView: View {
     private var header: some View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: server.kind.symbolName)
-                .font(.system(size: 30))
-                .foregroundStyle(server.kind.tint)
-                .frame(width: 42, height: 42)
+                .font(.system(size: 28, weight: .medium))
+                .foregroundStyle(ActivityTheme.accent)
+                .frame(width: 50, height: 50)
+                .background(ActivityTheme.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
 
             VStack(alignment: .leading, spacing: 6) {
+                Text("SELECTED SERVER")
+                    .font(.system(size: 11, weight: .heavy))
+                    .tracking(2)
+                    .foregroundStyle(ActivityTheme.accent)
+
                 Text(server.displayName)
-                    .font(.largeTitle.weight(.semibold))
+                    .font(.system(size: 34, weight: .black))
+                    .fontWidth(.condensed)
+                    .foregroundStyle(ActivityTheme.bone)
                     .lineLimit(1)
 
                 HStack(spacing: 8) {
@@ -105,11 +115,11 @@ struct ServerDetailView: View {
                     }
                 }
                 .font(.callout)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(ActivityTheme.muted)
 
                 Text("A port number is not an identity. Review the process before stopping it.")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(ActivityTheme.muted)
             }
 
             Spacer()
@@ -120,7 +130,7 @@ struct ServerDetailView: View {
         HStack {
             Text(store.statusMessage)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(ActivityTheme.muted)
                 .lineLimit(1)
 
             Spacer()
@@ -137,6 +147,7 @@ struct ServerDetailView: View {
             } label: {
                 Label("Stop", systemImage: "stop.circle")
             }
+            .buttonStyle(.borderedProminent)
             .disabled(server.canStop == false || store.isStopping)
             .keyboardShortcut(.delete, modifiers: [.command])
 
@@ -145,11 +156,15 @@ struct ServerDetailView: View {
             } label: {
                 Label("Force Stop", systemImage: "xmark.octagon")
             }
+            .buttonStyle(.bordered)
             .disabled(server.canStop == false || store.isStopping)
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 12)
-        .background(.regularMaterial)
+        .background(ActivityTheme.surface)
+        .overlay(alignment: .top) {
+            ActivityTheme.accent.frame(height: 2)
+        }
     }
 
     private var confirmationTitle: String {
@@ -176,12 +191,13 @@ private struct DetailRow: View {
     var body: some View {
         GridRow {
             Text(label)
-                .font(.callout)
-                .foregroundStyle(.secondary)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(ActivityTheme.muted)
                 .frame(width: 88, alignment: .leading)
 
             Text(value.isEmpty ? "Unknown" : value)
                 .font(monospaced ? .system(.callout, design: .monospaced) : .callout)
+                .foregroundStyle(ActivityTheme.bone)
                 .textSelection(.enabled)
                 .lineLimit(monospaced ? 3 : 2)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -200,9 +216,27 @@ private struct StatusBanner: View {
                 .foregroundStyle(tint)
             Text(text)
                 .font(.callout)
+                .foregroundStyle(ActivityTheme.bone)
             Spacer()
         }
-        .padding(10)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
+        .padding(12)
+        .background(ActivityTheme.surface, in: RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(ActivityTheme.hairline))
+    }
+}
+
+private struct ActivitySectionStyle: GroupBoxStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            configuration.label
+                .font(.system(size: 12, weight: .heavy))
+                .tracking(1.5)
+                .foregroundStyle(ActivityTheme.accent)
+            configuration.content
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(ActivityTheme.surface, in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(ActivityTheme.hairline))
     }
 }

@@ -35,22 +35,26 @@ struct ContentView: View {
                     isRefreshing: store.isRefreshing,
                     lastRefresh: store.lastRefresh
                 )
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 18)
 
-                Divider()
+                Rectangle()
+                    .fill(ActivityTheme.hairline)
+                    .frame(height: 1)
 
                 List(filteredServers, selection: $store.selectedID) { server in
                     ServerRowView(server: server)
                         .tag(server.id)
                 }
                 .listStyle(.sidebar)
+                .scrollContentBackground(.hidden)
                 .overlay {
                     if filteredServers.isEmpty {
                         EmptySidebarView(hasServers: store.servers.isEmpty == false)
                     }
                 }
             }
+            .background(ActivityTheme.sidebar)
             .navigationSplitViewColumnWidth(min: 280, ideal: 330, max: 420)
         } detail: {
             if let server = store.selectedServer {
@@ -60,6 +64,11 @@ struct ContentView: View {
             }
         }
         .frame(minWidth: 920, minHeight: 560)
+        .preferredColorScheme(.dark)
+        .tint(ActivityTheme.accent)
+        .overlay(alignment: .top) {
+            ActivityTheme.accent.frame(height: 3).allowsHitTesting(false)
+        }
         .searchable(text: $searchText, placement: .sidebar, prompt: "Filter servers")
         .toolbar {
             ToolbarItemGroup {
@@ -88,34 +97,38 @@ private struct ServerSummaryBar: View {
     let lastRefresh: Date?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Circle()
-                    .fill(count == 0 ? Color.secondary : Color.red)
-                    .frame(width: 7, height: 7)
-                Text("LOCALHOST")
-                    .font(.caption2.weight(.bold))
-                    .tracking(1.4)
-                    .foregroundStyle(.secondary)
-                Spacer()
+        VStack(alignment: .leading, spacing: 9) {
+            Text("DEV SERVER ACTIVITY")
+                .font(.system(size: 11, weight: .heavy))
+                .tracking(2)
+                .foregroundStyle(ActivityTheme.accent)
+
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text(count.formatted())
+                    .font(.system(size: 42, weight: .black))
+                    .fontWidth(.condensed)
+                    .foregroundStyle(count == 0 ? ActivityTheme.bone : ActivityTheme.accent)
+
+                Text(count == 1 ? "SERVER RUNNING" : "SERVERS RUNNING")
+                    .font(.system(size: 14, weight: .heavy))
+                    .fontWidth(.condensed)
+                    .foregroundStyle(ActivityTheme.bone)
+
+                Spacer(minLength: 0)
+
                 if isRefreshing {
                     ProgressView()
-                        .scaleEffect(0.65)
-                        .frame(width: 18, height: 18)
+                        .controlSize(.small)
                 }
             }
 
-            Text("\(count) running")
-                .font(.title2.weight(.bold))
-                .monospacedDigit()
-
             Text("See what is still listening.")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(ActivityTheme.muted)
 
             Text(lastRefreshText)
                 .font(.caption2)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(ActivityTheme.muted)
         }
     }
 
@@ -132,12 +145,14 @@ private struct EmptySidebarView: View {
         VStack(spacing: 10) {
             Image(systemName: hasServers ? "magnifyingglass" : "powerplug")
                 .font(.system(size: 28))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(ActivityTheme.accent)
             Text(hasServers ? "No Matches" : "No Servers Found")
-                .font(.headline)
+                .font(.system(.headline, design: .default, weight: .heavy))
+                .fontWidth(.condensed)
+                .foregroundStyle(ActivityTheme.bone)
             Text(hasServers ? "Clear the filter to see running servers." : "No local dev servers found in this scan.")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(ActivityTheme.muted)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 220)
         }
@@ -149,14 +164,24 @@ private struct EmptyDetailView: View {
     let refresh: () -> Void
 
     var body: some View {
-        ContentUnavailableView {
-            Label("See what is still listening", systemImage: "network")
-        } description: {
+        VStack(spacing: 14) {
+            Image(systemName: "network.slash")
+                .font(.system(size: 42, weight: .light))
+                .foregroundStyle(ActivityTheme.accent)
+            Text("SEE WHAT IS STILL LISTENING")
+                .font(.system(size: 30, weight: .black))
+                .fontWidth(.condensed)
+                .foregroundStyle(ActivityTheme.bone)
             Text("Select a server to review its project, command, PID, and ports before you stop it.")
-        } actions: {
+                .foregroundStyle(ActivityTheme.muted)
+                .multilineTextAlignment(.center)
             Button(action: refresh) {
                 Label("Refresh", systemImage: "arrow.clockwise")
             }
+            .buttonStyle(.borderedProminent)
         }
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(ActivityTheme.canvas)
     }
 }
