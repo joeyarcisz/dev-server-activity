@@ -14,6 +14,7 @@ BIN_PATH="$(/usr/bin/swift build --show-bin-path)"
   -strict-concurrency=complete \
   -warnings-as-errors \
   -I "$BIN_PATH/Modules" \
+  -I "$BIN_PATH" \
   "$ROOT_DIR/Tests/APICompatibility/NonSendableProtocolConformers.swift"
 
 printf 'Public protocol compatibility check passed for non-Sendable Swift 6 client conformers.\n'

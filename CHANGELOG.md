@@ -16,6 +16,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Improved Auto refresh toolbar spacing and control sizing.
 - Updated the GitHub introduction with the zombie-server campaign and added development-only native UI previews with synthetic data.
 
+### Fixed
+
+- Omitted debug path metadata from release builds with newer SwiftPM build engines.
+- Supported both native and Swift Build module layouts in the public API compatibility check.
+
 ## [1.0.1] - 2026-08-27
 
 ### Security
