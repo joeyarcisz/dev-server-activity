@@ -9,7 +9,8 @@ final class ShellCommandRunnerTests: XCTestCase {
         DispatchQueue.concurrentPerform(iterations: 32) { index in
             do {
                 let expected = "command-\(index)"
-                XCTAssertEqual(try runner.run("/usr/bin/printf", arguments: [expected]), expected)
+                let actual = try runner.run("/usr/bin/printf", arguments: [expected])
+                XCTAssertEqual(actual, expected)
             } catch {
                 XCTFail("Concurrent command failed: \(error)")
             }
