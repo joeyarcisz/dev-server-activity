@@ -1,12 +1,18 @@
 # Dev Server Activity
 
-A native Mac app for finding local development servers that are still running and stopping only the ones you choose.
+## Kill the zombie servers.
+
+See what is still listening. Inspect the project, command, PID, and ports. Stop only what you choose.
+
+**Free, open source, native macOS.** [Download the latest signed and notarized build](https://github.com/joeyarcisz/dev-server-activity/releases/latest) or [build from source](#build-from-source).
 
 [![CI](https://github.com/joeyarcisz/dev-server-activity/actions/workflows/ci.yml/badge.svg)](https://github.com/joeyarcisz/dev-server-activity/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/joeyarcisz/dev-server-activity)](https://github.com/joeyarcisz/dev-server-activity/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-0A7B83.svg)](LICENSE)
 
-![Dev Server Activity showing two local Python servers with project, PID, port, and stop controls](docs/images/dev-server-activity.png)
+![Kill the zombie servers. Dev Server Activity shows local servers with their project, command, PID, hosts, ports, and selected stop controls.](docs/images/kill-zombie-servers.png)
+
+The app shows the actual process behind a local server and checks its identity again before it sends a stop signal. [See the unframed app screenshot](docs/images/dev-server-activity.png).
 
 ## Why it exists
 
@@ -27,13 +33,13 @@ The release is signed with a Developer ID certificate, notarized by Apple, and r
 Each release includes a SHA-256 checksum file. From the directory containing both downloads:
 
 ```bash
-shasum -a 256 -c DevServerActivity-1.0.1-2-macos-arm64.sha256
+shasum -a 256 -c DevServerActivity-1.1.0-3-macos-arm64.sha256
 ```
 
 With GitHub CLI installed, verify the repository's release-verification attestation:
 
 ```bash
-gh attestation verify DevServerActivity-1.0.1-2-macos-arm64.zip \
+gh attestation verify DevServerActivity-1.1.0-3-macos-arm64.zip \
   --repo joeyarcisz/dev-server-activity \
   --predicate-type https://in-toto.io/attestation/release/v0.1
 ```

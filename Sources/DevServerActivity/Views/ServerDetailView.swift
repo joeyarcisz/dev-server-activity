@@ -5,60 +5,95 @@ import SwiftUI
 struct ServerDetailView: View {
     let server: DevServer
     @ObservedObject var store: ServerActivityStore
-
     @State private var pendingStop: StopRequest?
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 26) {
                 header
 
-                if let errorMessage = store.errorMessage {
-                    StatusBanner(text: errorMessage, systemImage: "exclamationmark.triangle", tint: .orange)
-                } else {
-                    StatusBanner(text: store.statusMessage, systemImage: "checkmark.circle", tint: .green)
+                if let error = store.errorMessage {
+                    Label {
+                        Text(error).fixedSize(horizontal: false, vertical: true)
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle")
+                    }
+                    .font(.callout)
+                    .foregroundStyle(.primary)
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: 8))
                 }
 
-                GroupBox("Addresses") {
-                    VStack(alignment: .leading, spacing: 10) {
-                        ForEach(server.ports, id: \.self) { port in
-                            HStack {
-                                Text(verbatim: "http://localhost:\(port)")
-                                    .font(.system(.body, design: .monospaced))
-                                    .textSelection(.enabled)
-                                Spacer()
-                                Button {
-                                    open(port: port)
-                                } label: {
-                                    Label("Open", systemImage: "safari")
-                                }
+                VStack(alignment: .leading, spacing: 8) {
+                    sectionLabel("Project folder")
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "folder")
+                            .foregroundStyle(.secondary)
+                        Text(server.workingDirectory.isEmpty ? "Unavailable for this listener" : server.workingDirectory)
+                            .font(.system(size: 12, design: .monospaced))
+                            .textSelection(.enabled)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 10) {
+                    sectionLabel(server.ports.count == 1 ? "Local address" : "Local addresses")
+                    ForEach(server.ports, id: \.self) { port in
+                        HStack(spacing: 12) {
+                            Text(verbatim: "localhost:\(port)")
+                                .font(.system(size: 17, weight: .medium, design: .monospaced))
+                                .textSelection(.enabled)
+                            Spacer(minLength: 12)
+                            Button {
+                                open(port: port)
+                            } label: {
+                                Label("Open", systemImage: "arrow.up.right")
                             }
+                            .help(Text(verbatim: "Open http://localhost:\(port) in your browser"))
+                            .controlSize(.regular)
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                        .background(ActivityTheme.well, in: RoundedRectangle(cornerRadius: 8))
                     }
-                    .padding(.vertical, 4)
                 }
 
-                GroupBox("Process") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        DetailRow(label: "Project", value: server.workingDirectory)
-                        DetailRow(label: "PID", value: server.pid.map(String.init) ?? "Unavailable")
-                        DetailRow(label: "Name", value: server.commandName)
-                        DetailRow(label: "Hosts", value: server.hosts.joined(separator: ", "))
-                        DetailRow(label: "Command", value: server.commandLine, monospaced: true)
+                Rectangle().fill(ActivityTheme.rule).frame(height: 1)
+
+                VStack(alignment: .leading, spacing: 16) {
+                    sectionLabel("Process details")
+                    ProcessField(label: "Process", value: server.commandName)
+                    ProcessField(label: "PID", value: server.pid.map(String.init) ?? "Unavailable")
+                    ProcessField(label: "Hosts", value: server.hosts.joined(separator: ", "))
+
+                    VStack(alignment: .leading, spacing: 9) {
+                        Text("Command")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                        Text(server.commandLine.isEmpty ? "Unavailable" : server.commandLine)
+                            .font(.system(size: 12, design: .monospaced))
+                            .lineSpacing(4)
+                            .textSelection(.enabled)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(14)
+                            .background(ActivityTheme.well, in: RoundedRectangle(cornerRadius: 8))
                     }
-                    .padding(.vertical, 4)
                 }
             }
-            .padding(24)
+            .padding(32)
+            .frame(maxWidth: 840, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .safeAreaInset(edge: .bottom) {
-            actionBar
-        }
+        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+        .background(ActivityTheme.canvas)
+        .safeAreaInset(edge: .bottom, spacing: 0) { actionBar }
         .confirmationDialog(
             confirmationTitle,
             isPresented: Binding(
                 get: { pendingStop != nil },
-                set: { if $0 == false { pendingStop = nil } }
+                set: { if !$0 { pendingStop = nil } }
             ),
             titleVisibility: .visible
         ) {
@@ -69,9 +104,7 @@ struct ServerDetailView: View {
                     store.stop(server: request.server, mode: request.mode)
                 }
             }
-            Button("Cancel", role: .cancel) {
-                pendingStop = nil
-            }
+            Button("Cancel", role: .cancel) { pendingStop = nil }
         } message: {
             if let pendingStop {
                 Text("This will stop \(pendingStop.server.displayName) on port \(pendingStop.server.portSummary).")
@@ -80,72 +113,81 @@ struct ServerDetailView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 14) {
-            Image(systemName: server.kind.symbolName)
-                .font(.system(size: 30))
-                .foregroundStyle(server.kind.tint)
-                .frame(width: 42, height: 42)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text(server.displayName)
-                    .font(.largeTitle.weight(.semibold))
-                    .lineLimit(1)
-
-                HStack(spacing: 8) {
-                    Label(server.kind.label, systemImage: "tag")
-                    Label(":\(server.portSummary)", systemImage: "number")
-                    if let pid = server.pid {
-                        if server.processIdentity == nil {
-                            Label("PID \(pid) unverified", systemImage: "lock.shield")
-                        } else {
-                            Label("PID \(pid)", systemImage: "cpu")
-                        }
-                    } else {
-                        Label("Port only", systemImage: "lock.shield")
-                    }
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: server.kind.symbolName)
+                    .foregroundStyle(.secondary)
+                Text(server.kind.label)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                HStack(spacing: 6) {
+                    Circle().fill(Color.green).frame(width: 6, height: 6)
+                    Text("Listening")
                 }
-                .font(.callout)
+                .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.secondary)
             }
+            .font(.system(size: 12))
 
-            Spacer()
+            Text(server.displayName)
+                .font(.system(size: 30, weight: .semibold))
+                .tracking(-0.7)
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(server.canStop
+                 ? "Review this server before you stop it."
+                 : "This listener is visible, but its process could not be verified.")
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
     private var actionBar: some View {
-        HStack {
-            Text(store.statusMessage)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
+        VStack(spacing: 0) {
+            Rectangle().fill(ActivityTheme.rule).frame(height: 1)
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(store.isStopping ? "Stopping server…" : server.canStop ? "Done with this server?" : "Stop unavailable")
+                        .font(.system(size: 12, weight: .medium))
+                    Text(server.canStop ? "Only this process will be stopped." : "Process identity is required.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 8)
+                Button(role: .destructive) {
+                    pendingStop = StopRequest(server: server, mode: .force)
+                } label: {
+                    Text("Force Stop…")
+                }
+                .buttonStyle(.bordered)
+                .help("End this process immediately, without allowing it to save state")
+                .disabled(!server.canStop || store.isStopping)
 
-            Spacer()
-
-            Button {
-                store.refresh()
-            } label: {
-                Label("Refresh", systemImage: "arrow.clockwise")
+                Button {
+                    pendingStop = StopRequest(server: server, mode: .normal)
+                } label: {
+                    Label("Stop Server…", systemImage: "stop.fill")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(ActivityTheme.stop)
+                .help("Ask this process to stop. You will confirm the selected server first.")
+                .disabled(!server.canStop || store.isStopping)
+                .keyboardShortcut(.delete, modifiers: [.command])
             }
-            .disabled(store.isRefreshing)
-
-            Button {
-                pendingStop = StopRequest(server: server, mode: .normal)
-            } label: {
-                Label("Stop", systemImage: "stop.circle")
-            }
-            .disabled(server.canStop == false || store.isStopping)
-            .keyboardShortcut(.delete, modifiers: [.command])
-
-            Button(role: .destructive) {
-                pendingStop = StopRequest(server: server, mode: .force)
-            } label: {
-                Label("Force Stop", systemImage: "xmark.octagon")
-            }
-            .disabled(server.canStop == false || store.isStopping)
+            .controlSize(.large)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 18)
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 12)
-        .background(.regularMaterial)
+        .background(ActivityTheme.canvas)
+    }
+
+    private func sectionLabel(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(.secondary)
     }
 
     private var confirmationTitle: String {
@@ -164,41 +206,21 @@ private struct StopRequest {
     let mode: StopMode
 }
 
-private struct DetailRow: View {
+private struct ProcessField: View {
     let label: String
     let value: String
-    var monospaced = false
 
     var body: some View {
-        GridRow {
+        HStack(alignment: .top, spacing: 16) {
             Text(label)
-                .font(.callout)
+                .font(.system(size: 12))
                 .foregroundStyle(.secondary)
-                .frame(width: 88, alignment: .leading)
-
-            Text(value.isEmpty ? "Unknown" : value)
-                .font(monospaced ? .system(.callout, design: .monospaced) : .callout)
+                .frame(width: 60, alignment: .leading)
+            Text(value.isEmpty ? "Unavailable" : value)
+                .font(.system(size: 12, design: .monospaced))
                 .textSelection(.enabled)
-                .lineLimit(monospaced ? 3 : 2)
+                .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-    }
-}
-
-private struct StatusBanner: View {
-    let text: String
-    let systemImage: String
-    let tint: Color
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: systemImage)
-                .foregroundStyle(tint)
-            Text(text)
-                .font(.callout)
-            Spacer()
-        }
-        .padding(10)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
     }
 }

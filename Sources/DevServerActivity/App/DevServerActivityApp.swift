@@ -9,6 +9,8 @@ struct DevServerActivityApp: App {
         WindowGroup {
             ContentView()
         }
+        .defaultSize(width: 1080, height: 720)
+        .windowResizability(.contentMinSize)
         .commands {
             CommandGroup(replacing: .newItem) {}
         }
