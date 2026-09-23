@@ -133,13 +133,16 @@ struct ContentView: View {
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 HStack(spacing: 8) {
-                    Text("Auto refresh").font(.system(size: 11))
+                    Text("Auto refresh").font(.system(size: 12))
                     Toggle("Auto refresh", isOn: $autoRefresh)
                         .labelsHidden()
                         .toggleStyle(.switch)
-                        .controlSize(.mini)
+                        .controlSize(.small)
                         .accessibilityLabel("Auto refresh")
                 }
+                .fixedSize()
+                .padding(.horizontal, 10)
+                .padding(.vertical, 3)
                 .help("Refresh the server list every six seconds")
                 Button(action: store.refresh) {
                     Label("Refresh", systemImage: "arrow.clockwise")
